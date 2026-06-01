@@ -564,12 +564,10 @@ export default function MicrosoftConnector({
         return;
       }
 
-      // Keep registering listener for popMessage responses
+// Keep registering listener for popMessage responses
       const handleMsg = (e: MessageEvent) => {
         const origin = e.origin;
         if (origin !== window.location.origin) {
-          return;
-        }
           return;
         }
 
@@ -587,11 +585,6 @@ export default function MicrosoftConnector({
       };
 
       window.addEventListener('message', handleMsg);
-    } catch (err: any) {
-      setApiError(`OAuth Initialization failed: ${err.message}`);
-      setAuthStatus('idle');
-    }
-  };
 
   // 9. Signout Connection
   const handleSignout = () => {
