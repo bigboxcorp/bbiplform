@@ -62,7 +62,8 @@ async function startServer() {
   app.get('/api/config', (req, res) => {
     // Determine the host for callback redirection
     const host = req.get('host') || 'localhost:3000';
-    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+    const protocol = isLocalhost ? 'http' : 'https';
     const calculatedUrl = `${protocol}://${host}`;
 
     const { clientId, clientSecret } = getMicrosoftCredentials();
@@ -82,7 +83,8 @@ async function startServer() {
     let redirectUri = clientRedirectUri;
     if (!redirectUri) {
       const host = req.get('host') || 'localhost:3000';
-      const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+      const protocol = isLocalhost ? 'http' : 'https';
       redirectUri = `${protocol}://${host}/auth/callback`;
     }
 
@@ -129,7 +131,8 @@ async function startServer() {
       redirectUri = state;
     } else {
       const host = req.get('host') || 'localhost:3000';
-      const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+      const protocol = isLocalhost ? 'http' : 'https';
       redirectUri = `${protocol}://${host}/auth/callback`;
     }
 

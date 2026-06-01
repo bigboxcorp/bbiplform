@@ -56,6 +56,8 @@ export default function MicrosoftConnector({
   publishedUrl,
   formId
 }: MicrosoftConnectorProps) {
+  const secureUrl = (url?: string) => url ? url.replace(/^http:\/\//i, 'https://') : '';
+
   // Config & Env status
   const [hasCreds, setHasCreds] = useState<boolean | null>(null);
   const [appUrl, setAppUrl] = useState('');
@@ -1295,7 +1297,7 @@ export default function MicrosoftConnector({
                 {formConfig.settings?.logoUrl && (
                    <div className="mt-2 space-y-2">
                        <div className="relative inline-block">
-                           <img src={formConfig.settings.logoUrl} alt="Logo Preview" className="h-10 border border-slate-200 rounded" />
+                           <img src={secureUrl(formConfig.settings.logoUrl)} alt="Logo Preview" className="h-10 border border-slate-200 rounded" />
                            <button onClick={() => setFormConfig({...formConfig, settings: { ...formConfig.settings, logoUrl: '' }})} className="absolute -top-2 -right-2 bg-white rounded-full shadow text-rose-500"><XCircle size={14}/></button>
                        </div>
                        <div className="flex items-center gap-2">
@@ -1328,7 +1330,7 @@ export default function MicrosoftConnector({
                 </div>
                 {formConfig.settings?.coverUrl && (
                    <div className="relative inline-block w-full">
-                       <img src={formConfig.settings.coverUrl} alt="Cover Preview" className="w-full h-16 object-cover border border-slate-200 rounded" />
+                       <img src={secureUrl(formConfig.settings.coverUrl)} alt="Cover Preview" className="w-full h-16 object-cover border border-slate-200 rounded" />
                        <button onClick={() => setFormConfig({...formConfig, settings: { ...formConfig.settings, coverUrl: '' }})} className="absolute top-1 right-1 bg-white rounded-full shadow text-rose-500"><XCircle size={14}/></button>
                    </div>
                 )}

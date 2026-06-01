@@ -473,13 +473,13 @@ export default function FormSubmissionForm({
     <div className="space-y-6" id="form-submission-container">
       {formConfig.settings?.logoUrl && (
         <div className={`flex mb-4 ${formConfig.settings.logoAlignment === 'left' ? 'justify-start' : formConfig.settings.logoAlignment === 'right' ? 'justify-end' : 'justify-center'}`}>
-           <img src={formConfig.settings.logoUrl} alt="Logo" style={{ height: formConfig.settings.logoSize ? `${formConfig.settings.logoSize}px` : '64px' }} className="object-contain" />
+           <img src={formConfig.settings.logoUrl?.replace(/^http:\/\//i, 'https://')} alt="Logo" style={{ height: formConfig.settings.logoSize ? `${formConfig.settings.logoSize}px` : '64px' }} className="object-contain" />
         </div>
       )}
       
       <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col" style={{ borderTopWidth: '8px', ...themeStyle }}>
         {formConfig.settings?.coverUrl && (
-           <img src={formConfig.settings.coverUrl} alt="Cover" className="w-full h-32 sm:h-48 object-cover" />
+           <img src={formConfig.settings.coverUrl?.replace(/^http:\/\//i, 'https://')} alt="Cover" className="w-full h-32 sm:h-48 object-cover" />
         )}
         <div className={`p-6 border-b border-slate-100 flex items-center justify-between transition-colors bg-white ${formConfig.settings?.headerAlignment === 'center' ? 'flex-col text-center' : formConfig.settings?.headerAlignment === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
           <div className={`${formConfig.settings?.headerAlignment === 'center' ? 'w-full mb-3' : ''}`}>

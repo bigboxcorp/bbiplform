@@ -230,15 +230,17 @@ export default function PublicForm({ formId }: { formId: string }) {
     }
   };
 
+  const secureUrl = (url?: string) => url ? url.replace(/^http:\/\//i, 'https://') : '';
+
   const getBgStyle = () => {
     let style: any = {};
     if (formData?.config.settings?.backgroundColor) {
         style.backgroundColor = formData.config.settings.backgroundColor;
     }
     if (formData?.config.settings?.backgroundUrl) {
-        style.backgroundImage = `url(${formData.config.settings.backgroundUrl})`;
+        style.backgroundImage = `url(${secureUrl(formData.config.settings.backgroundUrl)})`;
     } else if (formData?.config.settings?.coverUrl) {
-        style.backgroundImage = `url(${formData.config.settings.coverUrl})`;
+        style.backgroundImage = `url(${secureUrl(formData.config.settings.coverUrl)})`;
     }
     return style;
   };
@@ -266,7 +268,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
+            {formData.config.settings?.logoUrl && <img src={secureUrl(formData.config.settings.logoUrl)} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
             <h1 className="text-xl font-bold text-slate-800 mb-2">Login Required</h1>
             <p className="text-sm text-slate-500 mb-6">This form requires you to sign in with your Microsoft 365 account to verify your identity.</p>
             {authError && <div className="mb-4 text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded border border-rose-200">{authError}</div>}
@@ -287,7 +289,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData?.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
+            {formData?.config.settings?.logoUrl && <img src={secureUrl(formData.config.settings.logoUrl)} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
             <h1 className="text-2xl font-bold text-slate-800 mb-2">Form Closed</h1>
             <p className="text-sm text-slate-600 font-medium mb-6">{timeError}</p>
          </div>
@@ -299,7 +301,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
+            {formData.config.settings?.logoUrl && <img src={secureUrl(formData.config.settings.logoUrl)} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
             <h1 className="text-xl font-bold text-slate-800 mb-2">Already Responded</h1>
             <p className="text-sm text-slate-500 mb-6">You can only fill out this form once.</p>
          </div>
