@@ -91,7 +91,9 @@ export default function App() {
     if (loginTimer > 0) return;
     try {
       setIsLoggingIn(true);
-      const clientRedirectUri = `${window.location.origin}/auth/callback`;
+      const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+      const origin = isLocalhost ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
+      const clientRedirectUri = `${origin}/auth/callback`;
       const res = await fetch(`/api/auth/url?redirect_uri=${encodeURIComponent(clientRedirectUri)}`);
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
@@ -237,7 +239,9 @@ export default function App() {
          setActiveFormId(finalId);
       }
       
-      const pUrl = `${window.location.origin}/form/${finalId}`;
+      const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+      const origin = isLocalhost ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
+      const pUrl = `${origin}/form/${finalId}`;
       setPublishedUrl(pUrl);
       
       if (!isNew) {
@@ -255,7 +259,9 @@ export default function App() {
     setFormConfig(config);
     setSaveConfig(excelConfig);
     if (id) {
-      const pUrl = `${window.location.origin}/form/${id}`;
+      const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+      const origin = isLocalhost ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
+      const pUrl = `${origin}/form/${id}`;
       setPublishedUrl(pUrl);
     } else {
        setPublishedUrl(null);

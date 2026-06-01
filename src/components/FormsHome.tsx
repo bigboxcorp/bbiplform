@@ -29,6 +29,8 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
       });
   };
 
+  const safeOrigin = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1') ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
+
   useEffect(() => {
     fetchForms();
   }, [userEmail]);
@@ -102,7 +104,7 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
               <div className="border-t border-slate-100 p-3 bg-slate-50 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Edit Form</span>
                  <a 
-                   href={`${window.location.origin}/form/${form.id}`} 
+                   href={`${safeOrigin}/form/${form.id}`} 
                    target="_blank" 
                    rel="noopener noreferrer" 
                    onClick={e => e.stopPropagation()} 

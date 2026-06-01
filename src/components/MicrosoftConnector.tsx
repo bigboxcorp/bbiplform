@@ -624,7 +624,9 @@ export default function MicrosoftConnector({
       setApiError(null);
 
       // Request auth url from express server
-      const clientRedirectUri = `${window.location.origin}/auth/callback`;
+      const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
+      const origin = isLocalhost ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
+      const clientRedirectUri = `${origin}/auth/callback`;
       const res = await fetch(`/api/auth/url?redirect_uri=${encodeURIComponent(clientRedirectUri)}`);
       if (!res.ok) {
         throw new Error(await res.text());
