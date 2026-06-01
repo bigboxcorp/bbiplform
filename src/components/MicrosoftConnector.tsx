@@ -148,14 +148,40 @@ export default function MicrosoftConnector({
   }, []);
 
   useEffect(() => {
-    if (saveConfig && formConfig.settings?.isMappingLocked === false && !selectedTeamId) {
-      if (saveConfig.uploadFolderPath) setUploadFolderPath(saveConfig.uploadFolderPath);
-      handleTeamChange(saveConfig.groupId).then(() => {
-         handleChannelChange(saveConfig.channelId).then(() => {
-            handleFileSelect(saveConfig.fileId);
-         });
-      });
-    }
+    const restoreSetup = async () => {
+       if (saveConfig && formConfig.settings?.isMappingLocked === false && !selectedTeamId && tokens) {
+         if (saveConfig.uploadFolderPath) setUploadFolderPath(saveConfig.uploadFolderPath);
+         try {
+            setIsLoading(true);
+            setSelectedTeamId(saveConfig.groupId);
+            setSelectedChannelId(saveConfig.channelId);
+            setSelectedChannelName(saveConfig.channelName);
+            setSelectedFileId(saveConfig.fileId);
+            setSelectedFileName(saveConfig.fileName);
+            setSelectedTableName(saveConfig.tableName);
+            setSelectedSheetName(saveConfig.sheetName);
+            
+            const driveInfo = await getTeamDrive(saveConfig.groupId, tokens, setTokens);
+            setDriveId(driveInfo.id);
+            const userChannels = await getTeamChannels(saveConfig.groupId, driveInfo.id, tokens, setTokens);
+            setChannels(userChannels);
+            
+            const files = await getExcelFilesInChannel(driveInfo.id, saveConfig.channelName, tokens, setTokens);
+            setExcelFiles(files);
+            
+            const sheetsList = await getWorkbookWorksheets(driveInfo.id, saveConfig.fileId, tokens, setTokens);
+            setWorksheets(sheetsList);
+            const tablesList = await getWorkbookTables(driveInfo.id, saveConfig.fileId, tokens, setTokens);
+            setTables(tablesList);
+            
+            const cols = await getTableColumns(driveInfo.id, saveConfig.fileId, saveConfig.tableName, tokens, setTokens);
+            setTableColumns(cols.map(c => c.name));
+
+            setFieldMappings(saveConfig.columnsMapping || {});
+         } catch(e) { console.warn(e); } finally { setIsLoading(false); }
+       }
+    };
+    restoreSetup();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveConfig, formConfig.settings?.isMappingLocked, tokens]);
 
