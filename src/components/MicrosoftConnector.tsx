@@ -149,7 +149,7 @@ export default function MicrosoftConnector({
 
   useEffect(() => {
     const restoreSetup = async () => {
-       if (saveConfig && formConfig.settings?.isMappingLocked === false && !selectedTeamId && tokens) {
+       if (saveConfig && !selectedTeamId && tokens) {
          if (saveConfig.uploadFolderPath) setUploadFolderPath(saveConfig.uploadFolderPath);
          try {
             setIsLoading(true);
@@ -183,7 +183,7 @@ export default function MicrosoftConnector({
     };
     restoreSetup();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saveConfig, formConfig.settings?.isMappingLocked, tokens]);
+  }, [saveConfig, tokens]);
 
   const fetchConfig = async () => {
     try {
@@ -326,8 +326,14 @@ export default function MicrosoftConnector({
       setIsCreatingExcel(true);
       setApiError(null);
       
-      const finalFileName = `${autoName}.xlsx`;
-      const headers = ['Submission ID', 'Submitted At', ...formConfig.fields.map(f => f.label)];
+      const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+      const headers = ['Submission ID', 'Submitted At'];
+      
+      if (formConfig.settings?.collectEmails) {
+         headers.push('Submitter Email');
+      }
+      
+      headers.push(...fieldsToSave.map(f => f.label));
 
       const result = await createExcelFileWithTable(
         driveId,
@@ -358,9 +364,12 @@ export default function MicrosoftConnector({
       // Auto Map
       const teamObj = teams.find(t => t.id === selectedTeamId);
       const mapping: Record<string, string> = {};
-      formConfig.fields.forEach(f => {
+      fieldsToSave.forEach(f => {
         mapping[f.id] = f.label;
       });
+      if (formConfig.settings?.collectEmails) {
+         mapping['respondent_email'] = 'Submitter Email';
+      }
 
       setSaveConfig({
         groupName: teamObj?.displayName || '',
@@ -398,7 +407,14 @@ export default function MicrosoftConnector({
       const finalFileName = baseName.endsWith('.xlsx') ? baseName : `${baseName}.xlsx`;
 
       // Derive headers from form fields (Required to set up table)
-      const headers = ['Submission ID', 'Submitted At', ...formConfig.fields.map(f => f.label)];
+      const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+      const headers = ['Submission ID', 'Submitted At'];
+      
+      if (formConfig.settings?.collectEmails) {
+         headers.push('Submitter Email');
+      }
+      
+      headers.push(...fieldsToSave.map(f => f.label));
 
       const result = await createExcelFileWithTable(
         driveId,
@@ -433,7 +449,10 @@ export default function MicrosoftConnector({
         '__submission_id': 'Submission ID',
         '__submitted_at': 'Submitted At',
       };
-      formConfig.fields.forEach(field => {
+      if (formConfig.settings?.collectEmails) {
+         mapping['respondent_email'] = 'Submitter Email';
+      }
+      fieldsToSave.forEach(field => {
         mapping[field.id] = field.label;
       });
 
@@ -552,14 +571,19 @@ export default function MicrosoftConnector({
 
     const teamObj = teams.find(t => t.id === selectedTeamId);
     
+    const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+    
     // Auto map form fields to Table Columns if possible
     const mapping: Record<string, string> = {
       '__submission_id': 'Submission ID',
       '__submitted_at': 'Submitted At'
     };
+    if (formConfig.settings?.collectEmails) {
+       mapping['respondent_email'] = 'Submitter Email';
+    }
     
     // Default Map based on identical names
-    formConfig.fields.forEach(f => {
+    fieldsToSave.forEach(f => {
       mapping[f.id] = f.label;
     });
 
@@ -582,6 +606,18 @@ export default function MicrosoftConnector({
   // 8. Trigger Microsoft OAuth auth-code popup flow
   const handleConnectM365 = async () => {
     try {
+      const timeout = localStorage.getItem('m365_admin_login_timeout');
+      if (timeout) {
+         const timeLeft = parseInt(timeout) - Date.now();
+         if (timeLeft > 0) {
+            setApiError(`Too many failed attempts. Please wait ${Math.ceil(timeLeft / 1000)} seconds.`);
+            return;
+         } else {
+            localStorage.removeItem('m365_admin_login_timeout');
+            localStorage.removeItem('m365_admin_login_fails');
+         }
+      }
+
       setAuthStatus('authorizing');
       setApiError(null);
 
@@ -606,6 +642,9 @@ export default function MicrosoftConnector({
         setAuthStatus('idle');
         return;
       }
+      
+      let failCount = Number(localStorage.getItem('m365_admin_login_fails') || '0');
+      let checkInterval: NodeJS.Timeout;
 
       // Keep registering listener for popMessage responses
       const handleMsg = (e: MessageEvent) => {
@@ -615,12 +654,15 @@ export default function MicrosoftConnector({
         }
 
         if (e.data?.type === 'OAUTH_AUTH_SUCCESS') {
+          clearInterval(checkInterval);
+          localStorage.removeItem('m365_admin_login_fails');
           const authTokens = e.data.tokens as MSTokens;
           setTokens(authTokens);
           localStorage.setItem('microsoft_tokens', JSON.stringify(authTokens));
           setAuthStatus('success');
           window.removeEventListener('message', handleMsg);
         } else if (e.data?.type === 'OAUTH_AUTH_ERROR') {
+          clearInterval(checkInterval);
           setApiError(`Authentication failed: ${e.data.error}`);
           setAuthStatus('error');
           window.removeEventListener('message', handleMsg);
@@ -628,6 +670,32 @@ export default function MicrosoftConnector({
       };
 
       window.addEventListener('message', handleMsg);
+      
+      checkInterval = setInterval(() => {
+          if (authWindow.closed) {
+             clearInterval(checkInterval);
+             window.removeEventListener('message', handleMsg);
+             
+             // Check if already succeeded (status updated)
+             // We use a small timeout to let messages process
+             setTimeout(() => {
+                setAuthStatus(prev => {
+                   if (prev === 'connecting') {
+                      failCount++;
+                      localStorage.setItem('m365_admin_login_fails', failCount.toString());
+                      if (failCount >= 3) {
+                         localStorage.setItem('m365_admin_login_timeout', (Date.now() + 60000).toString());
+                         setApiError(`Authentication failed or canceled 3 times. Please wait 60 seconds before trying again.`);
+                      } else {
+                         setApiError(`Login window was closed before completing. (${failCount}/3)`);
+                      }
+                      return 'idle';
+                   }
+                   return prev;
+                });
+             }, 500);
+          }
+      }, 1000);
     } catch (err: any) {
       setApiError(`OAuth Initialization failed: ${err.message}`);
       setAuthStatus('idle');
@@ -769,144 +837,155 @@ export default function MicrosoftConnector({
           {/* 13. Dynamic selector grids */}
           {(!saveConfig || formConfig.settings?.isMappingLocked === false) && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Team select */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">1. Choose M365 Workspace (Team / Group)</label>
-              <select
-                value={selectedTeamId}
-                onChange={(e) => handleTeamChange(e.target.value)}
-                disabled={isLoading}
-                className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800 focus:border-blue-500 transition-all shadow-xs"
-                id="team-selector"
-              >
-                <option value="">Select Team Workspace</option>
-                {teams.map(team => (
-                  <option key={team.id} value={team.id}>{team.displayName}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Channel select */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">2. Choose Upload Folder (Channel)</label>
-              <select
-                value={selectedChannelId}
-                onChange={(e) => handleChannelChange(e.target.value)}
-                disabled={isLoading || !selectedTeamId}
-                className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800 focus:border-blue-500 transition-all shadow-xs disabled:opacity-50"
-                id="channel-selector"
-              >
-                <option value="">Select Channel</option>
-                {channels.map(chan => (
-                  <option key={chan.id} value={chan.id}>{chan.displayName}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {selectedChannelId && (
-            <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-6 animate-fadeIn">
-              
-              {formConfig.fields.some(f => f.type === 'file') && (
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
-                  <label className="text-xs font-bold text-slate-800 block mb-1">Folder Path for Uploaded Files</label>
-                  <p className="text-[10px] text-slate-500 mb-2">Since your form allows attachments, specify where they should be saved inside this channel's files (e.g. <code>Form_Uploads/Images</code>). It will be auto-created.</p>
-                  <input 
-                    type="text" 
-                    value={uploadFolderPath}
-                    onChange={(e) => setUploadFolderPath(e.target.value)}
-                    placeholder="Submissions_Attachments"
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:ring-2 mt-1 focus:ring-blue-500 font-mono"
-                  />
-                </div>
-              )}
-
-              {/* Option A: Create NEW file and automate layout */}
-              <div className="space-y-3 bg-white p-5 rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="p-1 px-2.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 font-bold text-[10px]">A</span>
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-yellow-500 fill-yellow-500" />
-                    Automated Option: Generate New Excel Sheet
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
-                  Initialize a pristine live workspace spreadsheet inside the <code>{selectedChannelName}</code> workspace instantly. We will auto-create dynamic columns for you.
-                </p>
-
-                <div className="flex gap-2 pt-1.5">
-                  <button 
-                    type="button"
-                    onClick={handleAutoSetup}
-                    disabled={isCreatingExcel}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold px-4 py-2 flex items-center justify-center gap-1.5 shadow-sm hover:shadow active:scale-95 cursor-pointer flex-1 transition-all"
+              {/* Common Team and Channel Selectors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                {/* Team select */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">1. Choose M365 Workspace (Team / Group)</label>
+                  <select
+                    value={selectedTeamId}
+                    onChange={(e) => handleTeamChange(e.target.value)}
+                    disabled={isLoading}
+                    className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800 focus:border-blue-500 transition-all shadow-xs"
+                    id="team-selector"
                   >
-                    {isCreatingExcel ? (
-                      <><RefreshCw size={12} className="animate-spin" /> Auto Setting Up...</>
-                    ) : (
-                      <><Sparkles size={13} /> 1-Click Auto Setup (Recommended)</>
-                    )}
-                  </button>
+                    <option value="">Select Team Workspace</option>
+                    {teams.map(team => (
+                      <option key={team.id} value={team.id}>{team.displayName}</option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="relative my-3">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
-                  <div className="relative flex justify-center"><span className="bg-white px-2 text-[10px] uppercase text-slate-400 font-bold">OR CUSTOM NAME</span></div>
-                </div>
-
-                <form onSubmit={handleCreateNewExcelFile} className="flex gap-2">
-                  <input 
-                    type="text" 
-                    value={newExcelFileName}
-                    onChange={(e) => setNewExcelFileName(e.target.value)}
-                    placeholder="Document Name (e.g., LeadDatabase)"
-                    disabled={isCreatingExcel}
-                    className="flex-1 text-xs px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-700 shadow-xs"
-                  />
-                  <button 
-                    type="submit"
-                    disabled={isCreatingExcel || !newExcelFileName.trim()}
-                    className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white rounded-lg text-xs font-bold px-4 py-2 flex items-center gap-1 shadow-sm hover:shadow active:scale-95 cursor-pointer shrink-0 transition-all"
+                {/* Channel select */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">2. Choose Upload Folder (Channel)</label>
+                  <select
+                    value={selectedChannelId}
+                    onChange={(e) => handleChannelChange(e.target.value)}
+                    disabled={isLoading || !selectedTeamId}
+                    className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-slate-800 focus:border-blue-500 transition-all shadow-xs disabled:opacity-50"
+                    id="channel-selector"
                   >
-                    <PlusCircle size={13} /> Create
-                  </button>
-                </form>
+                    <option value="">Select Channel</option>
+                    {channels.map(chan => (
+                      <option key={chan.id} value={chan.id}>{chan.displayName}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Break spacer */}
-              <div className="flex items-center justify-center gap-3 select-none">
-                <div className="h-[1px] bg-slate-200 flex-1"></div>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Or Use Existing File</span>
-                <div className="h-[1px] bg-slate-200 flex-1"></div>
-              </div>
+              {selectedChannelId && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start animate-fadeIn">
+                  
+                  {/* Left Column: Option A (Auto Setup) */}
+                  <div className="space-y-4 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="p-1 px-2.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 font-bold text-[10px]">AUTO SETUP</span>
+                      <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-yellow-500 fill-yellow-500" />
+                        Generate New Context Automatically
+                      </span>
+                    </div>
 
-              {/* Option B: Choose Existing excel file and table template */}
-              <div className="space-y-4 bg-white p-5 rounded-xl border border-slate-200">
-                <div className="flex items-center gap-2">
-                  <span className="p-1 px-2.5 bg-slate-100 text-slate-700 rounded border border-slate-200 font-bold text-[10px]">B</span>
-                  <span className="text-xs font-bold text-slate-800">Map Live to Existing Teams Document</span>
-                </div>
-
-                <div className="space-y-3">
-                  {/* Select file */}
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Excel Workbook</label>
-                    <select
-                      value={selectedFileId}
-                      onChange={(e) => handleFileChange(e.target.value)}
-                      disabled={isLoading}
-                      className="w-full text-xs px-4 py-2.5 bg-white border border-slate-350 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800 transition-all shadow-xs"
-                    >
-                      <option value="">Choose Worksheet File</option>
-                      {excelFiles.map(file => (
-                        <option key={file.id} value={file.id}>📄 {file.name}</option>
-                      ))}
-                    </select>
-                    {excelFiles.length === 0 && !isLoading && (
-                      <p className="text-[10px] text-amber-600 font-semibold mt-1">No Excel files found in the <code>{selectedChannelName}</code> folder yet.</p>
+                    {formConfig.fields.some(f => f.type === 'file') && (
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <label className="text-[11px] font-bold text-slate-800 block mb-1">Attachment Folder Path</label>
+                        <p className="text-[10px] text-slate-500 mb-2">Directory for file uploads in this channel.</p>
+                        <input 
+                          type="text" 
+                          value={uploadFolderPath}
+                          onChange={(e) => setUploadFolderPath(e.target.value)}
+                          placeholder="Submissions_Attachments"
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:ring-2 mt-1 focus:ring-blue-500 font-mono"
+                        />
+                      </div>
                     )}
+
+                    <div className="bg-white p-4 rounded-xl border border-slate-200">
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-medium mb-3">
+                        Initialize a pristine live workspace spreadsheet inside the <code>{selectedChannelName}</code> workspace instantly. We will auto-create dynamic columns for you.
+                      </p>
+
+                      <div className="flex gap-2">
+                        <button 
+                          type="button"
+                          onClick={handleAutoSetup}
+                          disabled={isCreatingExcel}
+                          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold px-4 py-2.5 flex items-center justify-center gap-1.5 shadow-sm hover:shadow active:scale-95 cursor-pointer transition-all"
+                        >
+                          {isCreatingExcel ? (
+                            <><RefreshCw size={12} className="animate-spin" /> Auto Setting Up...</>
+                          ) : (
+                            <><Sparkles size={13} /> 1-Click Auto Setup (Recommended)</>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="relative my-4">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-100"></div></div>
+                        <div className="relative flex justify-center"><span className="bg-white px-2 text-[10px] uppercase text-slate-400 font-bold">OR CUSTOM NAME</span></div>
+                      </div>
+
+                      <form onSubmit={handleCreateNewExcelFile} className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={newExcelFileName}
+                          onChange={(e) => setNewExcelFileName(e.target.value)}
+                          placeholder="Doc Name (e.g., Leads)"
+                          disabled={isCreatingExcel}
+                          className="flex-1 text-xs px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-700 shadow-xs"
+                        />
+                        <button 
+                          type="submit"
+                          disabled={isCreatingExcel || !newExcelFileName.trim()}
+                          className="bg-slate-800 hover:bg-slate-900 disabled:opacity-50 text-white rounded-lg text-xs font-bold px-4 py-2 flex items-center gap-1 shadow-sm hover:shadow active:scale-95 cursor-pointer shrink-0 transition-all"
+                        >
+                          <PlusCircle size={13} /> Create
+                        </button>
+                      </form>
+                    </div>
                   </div>
+
+                  {/* Right Column: Option B (Manual Setup) */}
+                  <div className="space-y-4 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="p-1 px-2.5 bg-slate-200 text-slate-700 rounded border border-slate-300 font-bold text-[10px]">MANUAL SETUP</span>
+                      <span className="text-sm font-bold text-slate-800">Map to Existing Document</span>
+                    </div>
+
+                    {formConfig.fields.some(f => f.type === 'file') && (
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <label className="text-[11px] font-bold text-slate-800 block mb-1">Attachment Folder Path</label>
+                        <p className="text-[10px] text-slate-500 mb-2">Directory for file uploads in this channel.</p>
+                        <input 
+                          type="text" 
+                          value={uploadFolderPath}
+                          onChange={(e) => setUploadFolderPath(e.target.value)}
+                          placeholder="Submissions_Attachments"
+                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:ring-2 mt-1 focus:ring-blue-500 font-mono"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200">
+                      {/* Select file */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Excel Workbook</label>
+                        <select
+                          value={selectedFileId}
+                          onChange={(e) => handleFileChange(e.target.value)}
+                          disabled={isLoading}
+                          className="w-full text-xs px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold text-slate-800 transition-all shadow-xs"
+                        >
+                          <option value="">Choose Worksheet File</option>
+                          {excelFiles.map(file => (
+                            <option key={file.id} value={file.id}>📄 {file.name}</option>
+                          ))}
+                        </select>
+                        {excelFiles.length === 0 && !isLoading && (
+                          <p className="text-[10px] text-amber-600 font-semibold mt-1">No Excel files found in the <code>{selectedChannelName}</code> folder yet.</p>
+                        )}
+                      </div>
 
                   {selectedFileId && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fadeIn">
@@ -1203,38 +1282,65 @@ export default function MicrosoftConnector({
          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
                 <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Company Logo</label>
-                <input type="file" accept="image/*" onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    const r = new FileReader();
-                    r.onload = () => setFormConfig({...formConfig, settings: { ...formConfig.settings, logoUrl: r.result as string }});
-                    r.readAsDataURL(f);
-                }} className="w-full text-[11px] mb-2 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <div className="flex flex-col gap-2 mb-2">
+                  <input type="file" accept="image/*" onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const r = new FileReader();
+                      r.onload = () => setFormConfig({...formConfig, settings: { ...formConfig.settings, logoUrl: r.result as string }});
+                      r.readAsDataURL(f);
+                  }} className="w-full text-[11px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  <input type="text" placeholder="Or Image Link URL" value={formConfig.settings?.logoUrl || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, logoUrl: e.target.value }})} className="w-full text-[10px] px-2 py-1.5 border border-slate-300 rounded focus:border-blue-500 font-mono" />
+                </div>
                 {formConfig.settings?.logoUrl && (
-                   <div className="relative inline-block mt-2">
-                       <img src={formConfig.settings.logoUrl} alt="Logo Preview" className="h-10 border border-slate-200 rounded" />
-                       <button onClick={() => setFormConfig({...formConfig, settings: { ...formConfig.settings, logoUrl: '' }})} className="absolute -top-2 -right-2 bg-white rounded-full shadow text-rose-500"><XCircle size={14}/></button>
+                   <div className="mt-2 space-y-2">
+                       <div className="relative inline-block">
+                           <img src={formConfig.settings.logoUrl} alt="Logo Preview" className="h-10 border border-slate-200 rounded" />
+                           <button onClick={() => setFormConfig({...formConfig, settings: { ...formConfig.settings, logoUrl: '' }})} className="absolute -top-2 -right-2 bg-white rounded-full shadow text-rose-500"><XCircle size={14}/></button>
+                       </div>
+                       <div className="flex items-center gap-2">
+                           <span className="text-[9px] text-slate-500">Size (px):</span>
+                           <input type="number" value={formConfig.settings.logoSize || 64} onChange={e => setFormConfig({...formConfig, settings: {...formConfig.settings, logoSize: parseInt(e.target.value)}})} className="w-16 text-[10px] px-1 py-0.5 border border-slate-300 rounded" />
+                       </div>
+                       <div className="flex items-center gap-2">
+                           <span className="text-[9px] text-slate-500">Align:</span>
+                           <select value={formConfig.settings.logoAlignment || 'center'} onChange={e => setFormConfig({...formConfig, settings: {...formConfig.settings, logoAlignment: e.target.value as any}})} className="text-[10px] px-1 py-0.5 border border-slate-300 rounded">
+                              <option value="left">Left</option>
+                              <option value="center">Center</option>
+                              <option value="right">Right</option>
+                           </select>
+                       </div>
                    </div>
                 )}
-                <span className="text-[9px] text-slate-400 block mt-2">Displays a small logo at the top center of your form.</span>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Cover Image Header</label>
-                <input type="file" accept="image/*" onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    const r = new FileReader();
-                    r.onload = () => setFormConfig({...formConfig, settings: { ...formConfig.settings, coverUrl: r.result as string }});
-                    r.readAsDataURL(f);
-                }} className="w-full text-[11px] mb-2 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Header Background (Cover / Color)</label>
+                <div className="flex flex-col gap-2 mb-2">
+                  <input type="file" accept="image/*" onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const r = new FileReader();
+                      r.onload = () => setFormConfig({...formConfig, settings: { ...formConfig.settings, coverUrl: r.result as string }});
+                      r.readAsDataURL(f);
+                  }} className="w-full text-[11px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                  <input type="text" placeholder="Or Image Link URL" value={formConfig.settings?.coverUrl || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, coverUrl: e.target.value }})} className="w-full text-[10px] px-2 py-1.5 border border-slate-300 rounded focus:border-blue-500 font-mono" />
+                </div>
                 {formConfig.settings?.coverUrl && (
-                   <div className="relative inline-block mt-2 w-full">
+                   <div className="relative inline-block w-full">
                        <img src={formConfig.settings.coverUrl} alt="Cover Preview" className="w-full h-16 object-cover border border-slate-200 rounded" />
                        <button onClick={() => setFormConfig({...formConfig, settings: { ...formConfig.settings, coverUrl: '' }})} className="absolute top-1 right-1 bg-white rounded-full shadow text-rose-500"><XCircle size={14}/></button>
                    </div>
                 )}
-                <span className="text-[9px] text-slate-400 block mt-2">Wide image banner for the top of the form layout.</span>
+                
+                <div className="mt-3">
+                   <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Title & Description Alignment</label>
+                   <select value={formConfig.settings?.headerAlignment || 'left'} onChange={e => setFormConfig({...formConfig, settings: {...formConfig.settings, headerAlignment: e.target.value as any}})} className="w-full text-[10px] px-2 py-1.5 border border-slate-300 rounded focus:border-blue-500">
+                      <option value="left">Left Aligned</option>
+                      <option value="center">Center Aligned</option>
+                      <option value="right">Right Aligned</option>
+                   </select>
+                </div>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:col-span-2">
@@ -1246,12 +1352,16 @@ export default function MicrosoftConnector({
                            <span className="text-[11px] font-mono font-medium text-slate-500">{formConfig.settings?.themeColor || '#2563eb'}</span>
                         </div>
                     </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Background Color</label>
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Page Background Color</label>
                         <div className="flex items-center gap-2">
                            <input type="color" value={formConfig.settings?.backgroundColor || '#f8fafc'} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, backgroundColor: e.target.value }})} className="w-8 h-8 rounded border-none cursor-pointer p-0 block bg-transparent" />
                            <span className="text-[11px] font-mono font-medium text-slate-500">{formConfig.settings?.backgroundColor || '#f8fafc'}</span>
                         </div>
+                    </div>
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Page Background Image URL (Optional)</label>
+                        <input type="text" placeholder="https://..." value={formConfig.settings?.backgroundUrl || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, backgroundUrl: e.target.value }})} className="w-full text-[10px] px-2 py-1.5 border border-slate-300 rounded focus:border-blue-500 font-mono" />
                     </div>
                 </div>
             </div>

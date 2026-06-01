@@ -147,21 +147,19 @@ export default function FormSubmissionForm({
        return;
     }
 
-    if (formConfig.settings?.preventEmptySubmissions) {
-      let hasData = false;
-      for (const key of Object.keys(formData)) {
-        const val = formData[key];
-        if (val !== undefined && val !== null && val !== '') {
-           if (Array.isArray(val) && val.length === 0) continue;
-           if (typeof val === 'object' && Object.keys(val).length === 0) continue;
-           hasData = true;
-           break;
-        }
+    let hasData = false;
+    for (const key of Object.keys(formData)) {
+      const val = formData[key];
+      if (val !== undefined && val !== null && val !== '') {
+         if (Array.isArray(val) && val.length === 0) continue;
+         if (typeof val === 'object' && Object.keys(val).length === 0 && !(val instanceof File)) continue;
+         hasData = true;
+         break;
       }
-      if (!hasData) {
-        setErrorMessage('You cannot submit an empty form. Please answer at least one question.');
-        return;
-      }
+    }
+    if (!hasData) {
+      setErrorMessage('You cannot submit an empty form. Please answer at least one question.');
+      return;
     }
 
     setIsSubmitting(true);
@@ -283,6 +281,7 @@ export default function FormSubmissionForm({
               const fId = mappedFieldEntry[0];
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
+              if (fId === 'respondent_email') return respondentEmail || 'Anonymous';
               const userVal = finalFormData[fId];
               return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
             }
@@ -356,6 +355,7 @@ export default function FormSubmissionForm({
               const fId = mappedFieldEntry[0];
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
+              if (fId === 'respondent_email') return typeof (window as any).respondentEmail !== 'undefined' ? ((window as any).respondentEmail || 'Anonymous') : 'Anonymous';
               const userVal = finalFormData[fId];
               return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
             }
@@ -397,6 +397,7 @@ export default function FormSubmissionForm({
       setSubmitStatus('success');
       
       if (publicMode && formId && formConfig.settings?.allowMultipleSubmissions === false) {
+          localStorage.setItem(`__form_submitted_${formId}`, 'true');
           const email = (window as any).respondentEmail;
           if (email) {
              try {
@@ -471,8 +472,8 @@ export default function FormSubmissionForm({
   return (
     <div className="space-y-6" id="form-submission-container">
       {formConfig.settings?.logoUrl && (
-        <div className="flex justify-center mb-4">
-           <img src={formConfig.settings.logoUrl} alt="Logo" className="h-16 object-contain" />
+        <div className={`flex mb-4 ${formConfig.settings.logoAlignment === 'left' ? 'justify-start' : formConfig.settings.logoAlignment === 'right' ? 'justify-end' : 'justify-center'}`}>
+           <img src={formConfig.settings.logoUrl} alt="Logo" style={{ height: formConfig.settings.logoSize ? `${formConfig.settings.logoSize}px` : '64px' }} className="object-contain" />
         </div>
       )}
       
@@ -480,8 +481,8 @@ export default function FormSubmissionForm({
         {formConfig.settings?.coverUrl && (
            <img src={formConfig.settings.coverUrl} alt="Cover" className="w-full h-32 sm:h-48 object-cover" />
         )}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between transition-colors bg-white">
-          <div>
+        <div className={`p-6 border-b border-slate-100 flex items-center justify-between transition-colors bg-white ${formConfig.settings?.headerAlignment === 'center' ? 'flex-col text-center' : formConfig.settings?.headerAlignment === 'right' ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
+          <div className={`${formConfig.settings?.headerAlignment === 'center' ? 'w-full mb-3' : ''}`}>
             <h2 className="font-bold text-slate-800 text-lg">{formConfig.title || 'Data Entry Form'}</h2>
             <p className="text-sm text-slate-500 mt-1">{formConfig.description || 'Fill out the form below.'}</p>
           </div>

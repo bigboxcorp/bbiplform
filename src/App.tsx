@@ -74,7 +74,21 @@ export default function App() {
     fetch('/api/config').then(res => res.json()).then(data => setAppUrl(data.appUrl)).catch(() => {});
   }, []);
 
+  const [loginFailedAttempts, setLoginFailedAttempts] = useState(0);
+  const [loginTimer, setLoginTimer] = useState(0);
+
+  useEffect(() => {
+    if (loginTimer > 0) {
+      const t = setTimeout(() => {
+         setLoginTimer(prev => prev - 1);
+         if (loginTimer - 1 === 0) setLoginFailedAttempts(0);
+      }, 1000);
+      return () => clearTimeout(t);
+    }
+  }, [loginTimer]);
+
   const handleLogin = async () => {
+    if (loginTimer > 0) return;
     try {
       setIsLoggingIn(true);
       const clientRedirectUri = `${window.location.origin}/auth/callback`;
@@ -89,10 +103,23 @@ export default function App() {
         return;
       }
 
+      let intervalId: NodeJS.Timeout;
+
+      const recordFailure = () => {
+         const newFails = loginFailedAttempts + 1;
+         setLoginFailedAttempts(newFails);
+         if (newFails >= 3) {
+            setLoginTimer(60);
+         }
+         setIsLoggingIn(false);
+      };
+
       const handleMsg = (e: MessageEvent) => {
         const origin = e.origin;
         if (origin !== window.location.origin) return;
         if (e.data?.type === 'OAUTH_AUTH_SUCCESS') {
+          clearInterval(intervalId);
+          window.removeEventListener('message', handleMsg);
           const authTokens = e.data.tokens as MSTokens;
           setTokens(authTokens);
           localStorage.setItem('microsoft_tokens', JSON.stringify(authTokens));
@@ -101,15 +128,25 @@ export default function App() {
              setUserEmail(p.userPrincipalName || p.mail || null);
           }).catch(e => { console.error('Failed to get profile from login:', e); });
 
+          setLoginFailedAttempts(0);
           setIsLoggingIn(false);
-          window.removeEventListener('message', handleMsg);
         } else if (e.data?.type === 'OAUTH_AUTH_ERROR') {
-          alert(`Auth Error: ${e.data.error}`);
-          setIsLoggingIn(false);
+          clearInterval(intervalId);
           window.removeEventListener('message', handleMsg);
+          recordFailure();
         }
       };
+      
       window.addEventListener('message', handleMsg);
+      
+      intervalId = setInterval(() => {
+         if (authWindow.closed) {
+             clearInterval(intervalId);
+             window.removeEventListener('message', handleMsg);
+             recordFailure();
+         }
+      }, 1000);
+
     } catch (err: any) {
       alert(err.message);
       setIsLoggingIn(false);
@@ -124,13 +161,25 @@ export default function App() {
             <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg mx-auto mb-6 shadow-sm">BBIPL</div>
             <h1 className="text-2xl font-bold text-slate-800 mb-2">Welcome Back</h1>
             <p className="text-sm text-slate-500 mb-8">Please sign in with your Microsoft 365 account to access the Forms Dashboard.</p>
+            
+            {loginTimer > 0 && (
+                <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100 font-semibold">
+                   Too many failed attempts. Try again in {loginTimer}s
+                </div>
+            )}
+            
             <button 
               onClick={handleLogin}
-              disabled={isLoggingIn}
-              className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:opacity-50"
+              disabled={isLoggingIn || loginTimer > 0}
+              className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoggingIn ? 'Connecting...' : 'Sign in with Microsoft'}
             </button>
+            {loginFailedAttempts > 0 && loginTimer === 0 && !isLoggingIn && (
+                <div className="mt-4 text-xs font-medium text-amber-600">
+                   Login was closed or failed ({loginFailedAttempts}/3 attempts remain)
+                </div>
+            )}
          </div>
        </div>
     );
@@ -152,6 +201,10 @@ export default function App() {
   const handlePublish = async () => {
     if (!saveConfig) {
       alert("Please map the form to an Excel spreadsheet in 'Microsoft 365 Integration' tab before publishing.");
+      return;
+    }
+    if (formConfig.settings?.isMappingLocked === false) {
+      alert("Please Complete and Lock the Sync Mapping in 'Microsoft 365 Integration' tab before updating the form.");
       return;
     }
     if (!tokens) {
@@ -184,8 +237,7 @@ export default function App() {
          setActiveFormId(finalId);
       }
       
-      const baseOrigin = window.location.hostname === 'localhost' ? window.location.origin : `https://${window.location.host}`;
-      const pUrl = `${baseOrigin}/form/${finalId}`;
+      const pUrl = `${window.location.origin}/form/${finalId}`;
       setPublishedUrl(pUrl);
       
       if (!isNew) {
@@ -203,8 +255,8 @@ export default function App() {
     setFormConfig(config);
     setSaveConfig(excelConfig);
     if (id) {
-       const baseOrigin = window.location.hostname === 'localhost' ? window.location.origin : `https://${window.location.host}`;
-       setPublishedUrl(`${baseOrigin}/form/${id}`);
+      const pUrl = `${window.location.origin}/form/${id}`;
+      setPublishedUrl(pUrl);
     } else {
        setPublishedUrl(null);
     }
@@ -313,7 +365,7 @@ export default function App() {
         <div className="flex gap-2 w-full sm:w-auto">
            {(activeTab === 'designer' || activeTab === 'connector') && (
              <button 
-                onClick={handlePublish} disabled={isPublishing || !saveConfig} 
+                onClick={handlePublish} disabled={isPublishing || !saveConfig || formConfig.settings?.isMappingLocked === false} 
                 className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center gap-1.5 items-center transition-colors cursor-pointer shadow-sm"
              >
                 <CheckCircle size={14} /> {isPublishing ? 'Saving...' : (activeFormId ? 'Save & Update Form' : 'Publish New Form')}

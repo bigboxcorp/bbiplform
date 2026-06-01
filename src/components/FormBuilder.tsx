@@ -177,8 +177,6 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                       placeholder={field.type === 'section_break' ? "Section Title..." : undefined}
                     />
                     <div className="flex items-center gap-1.5 mt-1 pl-2">
-                      {field.type !== 'section_break' && <span className="text-[10px] font-mono text-slate-450 font-medium">Excel Header ID: <span className="bg-slate-100 px-1.5 py-0.5 rounded font-bold text-slate-550">{field.id}</span></span>}
-                      {field.type !== 'section_break' && <span className="text-slate-300">•</span>}
                       <select
                          value={field.type}
                          onChange={(e) => updateField(field.id, { type: e.target.value as FormField['type'] })}

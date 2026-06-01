@@ -44,16 +44,28 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-      <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
             <FileText className="text-blue-600" /> My Forms
           </h2>
           <p className="text-sm text-slate-500 mt-1">Manage and create data collection forms</p>
         </div>
-        <button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer">
-          <Plus size={16} /> Create New Form
-        </button>
+        
+        <div className="flex flex-col sm:items-end gap-3">
+          {userEmail && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 shadow-xs">
+              <CheckCircle size={14} className="text-emerald-500" />
+              <div className="flex flex-col text-xs">
+                <span className="font-semibold">M365 Database Linked</span>
+                <span>Connected Identity: {userEmail}</span>
+              </div>
+            </div>
+          )}
+          <button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
+            <Plus size={16} /> Create New Form
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -90,7 +102,7 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
               <div className="border-t border-slate-100 p-3 bg-slate-50 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Edit Form</span>
                  <a 
-                   href={window.location.hostname === 'localhost' ? `/form/${form.id}` : `https://${window.location.host}/form/${form.id}`} 
+                   href={`${window.location.origin}/form/${form.id}`} 
                    target="_blank" 
                    rel="noopener noreferrer" 
                    onClick={e => e.stopPropagation()} 

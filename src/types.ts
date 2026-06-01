@@ -48,6 +48,10 @@ export interface FormSettings {
   themeColor?: string;
   backgroundColor?: string;
   logoUrl?: string;
+  logoSize?: number;
+  logoAlignment?: 'left' | 'center' | 'right';
+  headerAlignment?: 'left' | 'center' | 'right';
+  backgroundUrl?: string;
   coverUrl?: string;
   isMappingLocked?: boolean;
   dailyTimeRanges?: TimeRange[];

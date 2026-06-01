@@ -12,6 +12,7 @@ export default function PublicForm({ formId }: { formId: string }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [validProfileChecked, setValidProfileChecked] = useState(false);
+  const [respondentEmail, setRespondentEmail] = useState<string>('');
 
   useEffect(() => {
     fetch(`/api/forms/${formId}`)
@@ -20,6 +21,13 @@ export default function PublicForm({ formId }: { formId: string }) {
         return res.json();
       })
       .then(data => {
+        // Check local storage for multiple submissions rule before continuing
+        if (data.config?.settings?.allowMultipleSubmissions === false) {
+            if (localStorage.getItem(`__form_submitted_${data.id}`)) {
+                setHasAlreadySubmitted(true);
+            }
+        }
+        
         setFormData(data);
         setLoading(false);
 
@@ -108,6 +116,7 @@ export default function PublicForm({ formId }: { formId: string }) {
              getProfile(respondentTokens, setRespondentTokens).then(async (profile) => {
                  const email = profile.userPrincipalName || profile.mail || '';
                  (window as any).respondentEmail = email;
+                 setRespondentEmail(email);
                  
                  // If disable multiple submissions, check if already submitted
                  if (formData.config.settings?.allowMultipleSubmissions === false) {
@@ -226,7 +235,9 @@ export default function PublicForm({ formId }: { formId: string }) {
     if (formData?.config.settings?.backgroundColor) {
         style.backgroundColor = formData.config.settings.backgroundColor;
     }
-    if (formData?.config.settings?.coverUrl) {
+    if (formData?.config.settings?.backgroundUrl) {
+        style.backgroundImage = `url(${formData.config.settings.backgroundUrl})`;
+    } else if (formData?.config.settings?.coverUrl) {
         style.backgroundImage = `url(${formData.config.settings.coverUrl})`;
     }
     return style;
@@ -255,7 +266,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" className="h-12 mx-auto mb-4" />}
+            {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
             <h1 className="text-xl font-bold text-slate-800 mb-2">Login Required</h1>
             <p className="text-sm text-slate-500 mb-6">This form requires you to sign in with your Microsoft 365 account to verify your identity.</p>
             {authError && <div className="mb-4 text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded border border-rose-200">{authError}</div>}
@@ -276,7 +287,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData?.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" className="h-12 mx-auto mb-4" />}
+            {formData?.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
             <h1 className="text-2xl font-bold text-slate-800 mb-2">Form Closed</h1>
             <p className="text-sm text-slate-600 font-medium mb-6">{timeError}</p>
          </div>
@@ -288,7 +299,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" className="h-12 mx-auto mb-4" />}
+            {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
             <h1 className="text-xl font-bold text-slate-800 mb-2">Already Responded</h1>
             <p className="text-sm text-slate-500 mb-6">You can only fill out this form once.</p>
          </div>
@@ -299,9 +310,9 @@ export default function PublicForm({ formId }: { formId: string }) {
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 bg-cover bg-center" style={getBgStyle()}>
       <div className="max-w-3xl mx-auto relative">
-        {formData.config.settings?.requireMicrosoftLogin && validProfileChecked && (window as any).respondentEmail && (
+        {formData.config.settings?.requireMicrosoftLogin && validProfileChecked && respondentEmail && (
            <div className="absolute -top-7 right-0 text-[10px] text-slate-500 bg-white/50 px-2 py-0.5 rounded backdrop-blur border border-slate-200">
-             Logged in as: <span className="font-semibold text-slate-700">{(window as any).respondentEmail}</span>
+             Logged in as: <span className="font-semibold text-slate-700">{respondentEmail}</span>
            </div>
         )}
         <FormSubmissionForm 
