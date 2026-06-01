@@ -1,0 +1,6 @@
+{
+  "name": "Teams Excel Form Saver",
+  "description": "Create customizable forms and save submitted data directly into Excel spreadsheets in a Microsoft Teams channel or OneDrive, bypassing Power Automate using Microsoft Graph API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
