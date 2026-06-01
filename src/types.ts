@@ -41,13 +41,18 @@ export interface TimeRange {
 
 export interface FormSettings {
   requireMicrosoftLogin: boolean;
+  collectEmails?: boolean;
+  preventEmptySubmissions?: boolean;
   allowedDomains?: string; // Comma separated domains
   allowMultipleSubmissions?: boolean;
   themeColor?: string;
+  backgroundColor?: string;
   logoUrl?: string;
   coverUrl?: string;
   isMappingLocked?: boolean;
   dailyTimeRanges?: TimeRange[];
+  submissionPrefix?: string;
+  submissionStartNumber?: number;
 }
 
 export interface FormConfig {
@@ -120,6 +125,7 @@ export interface ExcelSaveConfig {
   sheetName: string;
   tableName: string;
   columnsMapping: Record<string, string>; // Maps Field ID to Excel Column Name
+  uploadFolderPath?: string; // Path inside the channel's root where files will be uploaded
 }
 
 export interface FormSubmission {

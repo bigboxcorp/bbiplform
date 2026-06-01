@@ -147,10 +147,37 @@ export default function FormSubmissionForm({
        return;
     }
 
+    if (formConfig.settings?.preventEmptySubmissions) {
+      let hasData = false;
+      for (const key of Object.keys(formData)) {
+        const val = formData[key];
+        if (val !== undefined && val !== null && val !== '') {
+           if (Array.isArray(val) && val.length === 0) continue;
+           if (typeof val === 'object' && Object.keys(val).length === 0) continue;
+           hasData = true;
+           break;
+        }
+      }
+      if (!hasData) {
+        setErrorMessage('You cannot submit an empty form. Please answer at least one question.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setErrorMessage('');
     
-    const submissionId = `SUB-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    let submissionId = `SUB-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    try {
+       const res = await fetch(`/api/forms/${formId}/generate-id`, { method: 'POST' });
+       if (res.ok) {
+           const data = await res.json();
+           if (data.nextId) submissionId = data.nextId;
+       }
+    } catch(err) {
+       console.warn('Could not fetch sequential ID from server', err);
+    }
+
     const submittedAt = new Date().toISOString();
 
     const newSubmission: FormSubmission = {

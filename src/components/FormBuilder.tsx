@@ -65,7 +65,8 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
 
     onChange({
       ...config,
-      fields: [...config.fields, newField]
+      fields: [...config.fields, newField],
+      settings: { ...config.settings, isMappingLocked: false }
     });
 
     setNewFieldLabel('');
@@ -78,7 +79,8 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
   const removeField = (id: string) => {
     onChange({
       ...config,
-      fields: config.fields.filter(f => f.id !== id)
+      fields: config.fields.filter(f => f.id !== id),
+      settings: { ...config.settings, isMappingLocked: false }
     });
   };
 
@@ -97,7 +99,8 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
           return updated;
         }
         return f;
-      })
+      }),
+      settings: { ...config.settings, isMappingLocked: false }
     });
   };
 
@@ -176,7 +179,26 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                     <div className="flex items-center gap-1.5 mt-1 pl-2">
                       {field.type !== 'section_break' && <span className="text-[10px] font-mono text-slate-450 font-medium">Excel Header ID: <span className="bg-slate-100 px-1.5 py-0.5 rounded font-bold text-slate-550">{field.id}</span></span>}
                       {field.type !== 'section_break' && <span className="text-slate-300">•</span>}
-                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={field.type === 'section_break' ? {color: '#2563eb'} : {color: '#94a3b8'}}>{field.type.replace('_', ' ')}</span>
+                      <select
+                         value={field.type}
+                         onChange={(e) => updateField(field.id, { type: e.target.value as FormField['type'] })}
+                         className="text-[10px] font-semibold uppercase tracking-wider bg-transparent cursor-pointer hover:bg-slate-100 rounded px-1 -ml-1 border-none outline-none appearance-none"
+                         style={field.type === 'section_break' ? {color: '#2563eb'} : {color: '#94a3b8'}}
+                      >
+                         <option value="short_text">SHORT TEXT</option>
+                         <option value="long_text">LONG TEXT</option>
+                         <option value="number">NUMBER</option>
+                         <option value="date">DATE</option>
+                         <option value="time">TIME</option>
+                         <option value="select">DROPDOWN</option>
+                         <option value="radio">SINGLE CHOICE</option>
+                         <option value="checkbox">MULTIPLE CHOICE</option>
+                         <option value="grid_radio">RADIO GRID</option>
+                         <option value="grid_checkbox">CHECKBOX GRID</option>
+                         <option value="file">FILE UPLOAD</option>
+                         <option value="rating">RATING</option>
+                         <option value="section_break">SECTION BREAK</option>
+                      </select>
                     </div>
                   </div>
 

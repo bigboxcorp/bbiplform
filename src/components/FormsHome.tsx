@@ -90,7 +90,7 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
               <div className="border-t border-slate-100 p-3 bg-slate-50 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Edit Form</span>
                  <a 
-                   href={`/form/${form.id}`} 
+                   href={window.location.hostname === 'localhost' ? `/form/${form.id}` : `https://${window.location.host}/form/${form.id}`} 
                    target="_blank" 
                    rel="noopener noreferrer" 
                    onClick={e => e.stopPropagation()} 

@@ -81,6 +81,7 @@ export default function MicrosoftConnector({
   const [selectedFileName, setSelectedFileName] = useState('');
   const [selectedSheetName, setSelectedSheetName] = useState('');
   const [selectedTableName, setSelectedTableName] = useState('');
+  const [uploadFolderPath, setUploadFolderPath] = useState('Submissions_Attachments');
 
   // UI state variables
   const [isLoading, setIsLoading] = useState(false);
@@ -145,6 +146,18 @@ export default function MicrosoftConnector({
   useEffect(() => {
     fetchConfig();
   }, []);
+
+  useEffect(() => {
+    if (saveConfig && formConfig.settings?.isMappingLocked === false && !selectedTeamId) {
+      if (saveConfig.uploadFolderPath) setUploadFolderPath(saveConfig.uploadFolderPath);
+      handleTeamChange(saveConfig.groupId).then(() => {
+         handleChannelChange(saveConfig.channelId).then(() => {
+            handleFileSelect(saveConfig.fileId);
+         });
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveConfig, formConfig.settings?.isMappingLocked, tokens]);
 
   const fetchConfig = async () => {
     try {
@@ -333,8 +346,10 @@ export default function MicrosoftConnector({
         driveId: driveId,
         groupId: selectedTeamId,
         driveItemId: createdFile.id,
-        columnsMapping: mapping
+        columnsMapping: mapping,
+        uploadFolderPath: uploadFolderPath
       });
+      setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: true } });
 
       alert(`✅ Auto Setup Complete! File "${finalFileName}" created and mapped automatically.`);
     } catch(err: any) {
@@ -532,11 +547,13 @@ export default function MicrosoftConnector({
       fileName: selectedFileName,
       sheetName: selectedSheetName || 'Sheet1',
       tableName: selectedTableName,
-      columnsMapping: mapping
+      columnsMapping: mapping,
+      uploadFolderPath: uploadFolderPath
     });
+    setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: true } });
   };
 
-// 8. Trigger Microsoft OAuth auth-code popup flow
+  // 8. Trigger Microsoft OAuth auth-code popup flow
   const handleConnectM365 = async () => {
     try {
       setAuthStatus('authorizing');
@@ -669,17 +686,6 @@ export default function MicrosoftConnector({
           <h2 className="font-bold text-slate-800 text-base">2. Connect Microsoft Teams</h2>
           <p className="text-xs text-slate-500 mt-0.5">Automated cloud storage inside shared Teams assets</p>
         </div>
-        
-        {tokens && profile && (
-          <button 
-            onClick={handleSignout} 
-            className="text-[11px] text-red-650 hover:text-red-700 font-bold flex items-center gap-1 bg-red-50 hover:bg-red-100/60 px-3 py-1.5 rounded-lg active:scale-95 cursor-pointer transition-all border border-red-200"
-            title="Disconnect Account"
-          >
-            <LogOut size={12} />
-            Logout
-          </button>
-        )}
       </div>
 
       {apiError && (
@@ -735,7 +741,9 @@ export default function MicrosoftConnector({
           )}
 
           {/* 13. Dynamic selector grids */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(!saveConfig || formConfig.settings?.isMappingLocked === false) && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Team select */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">1. Choose M365 Workspace (Team / Group)</label>
@@ -774,6 +782,20 @@ export default function MicrosoftConnector({
           {selectedChannelId && (
             <div className="border border-slate-200 rounded-xl p-5 bg-slate-50/50 space-y-6 animate-fadeIn">
               
+              {formConfig.fields.some(f => f.type === 'file') && (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-4">
+                  <label className="text-xs font-bold text-slate-800 block mb-1">Folder Path for Uploaded Files</label>
+                  <p className="text-[10px] text-slate-500 mb-2">Since your form allows attachments, specify where they should be saved inside this channel's files (e.g. <code>Form_Uploads/Images</code>). It will be auto-created.</p>
+                  <input 
+                    type="text" 
+                    value={uploadFolderPath}
+                    onChange={(e) => setUploadFolderPath(e.target.value)}
+                    placeholder="Submissions_Attachments"
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:ring-2 mt-1 focus:ring-blue-500 font-mono"
+                  />
+                </div>
+              )}
+
               {/* Option A: Create NEW file and automate layout */}
               <div className="space-y-3 bg-white p-5 rounded-xl border border-slate-200">
                 <div className="flex items-center gap-2">
@@ -956,9 +978,11 @@ export default function MicrosoftConnector({
               </div>
             </div>
           )}
+          </>
+          )}
 
           {/* 14. Locked Activation Config Details summary */}
-          {saveConfig && (
+          {saveConfig && formConfig.settings?.isMappingLocked !== false && (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3 animate-fadeIn">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-emerald-800">
@@ -968,7 +992,7 @@ export default function MicrosoftConnector({
                 <button
                   onClick={() => {
                      if (window.confirm("Are you sure you want to unlock map syncing? This form will stop working and you will need to re-map it before it can receive responses again.")) {
-                         setSaveConfig(null);
+                         setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: false } });
                      }
                   }}
                   className="px-2 py-1 bg-white text-rose-600 rounded text-[10px] font-bold border border-rose-200 hover:bg-rose-50 shadow-xs transition-colors cursor-pointer"
@@ -1036,31 +1060,64 @@ export default function MicrosoftConnector({
          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm">
             
             {/* Login Required */}
-            <label className="flex items-start gap-3 cursor-pointer group">
-              <input type="checkbox" checked={formConfig.settings?.requireMicrosoftLogin || false} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, requireMicrosoftLogin: e.target.checked }})} className="mt-0.5" />
+            <label className="flex items-start gap-3 cursor-pointer group mb-2">
+              <input type="checkbox" checked={formConfig.settings?.requireMicrosoftLogin || false} onChange={(e) => {
+                 let newVal = e.target.checked;
+                 const newSettings = { ...formConfig.settings, requireMicrosoftLogin: newVal };
+                 if (!newVal) {
+                    newSettings.collectEmails = false;
+                 }
+                 setFormConfig({...formConfig, settings: newSettings});
+              }} className="mt-0.5" />
               <div>
                  <span className="text-xs font-bold text-slate-800 block group-hover:text-blue-600">Require User Login Form Filling</span>
-                 <span className="text-[10px] text-slate-500">Only people signed into a Microsoft 365 Account can submit the form. (Records their email)</span>
+                 <span className="text-[10px] text-slate-500">Only people signed into a Microsoft 365 Account can submit the form.</span>
+              </div>
+            </label>
+
+            {/* Collect Emails */}
+            <label className="flex items-start gap-3 cursor-pointer group mb-2">
+              <input type="checkbox" checked={!!formConfig.settings?.collectEmails} onChange={(e) => {
+                 let newVal = e.target.checked;
+                 const newSettings = { ...formConfig.settings, collectEmails: newVal };
+                 if (newVal) {
+                    newSettings.requireMicrosoftLogin = true;
+                 }
+                 setFormConfig({...formConfig, settings: newSettings});
+              }} className="mt-0.5" />
+              <div>
+                 <span className="text-xs font-bold text-slate-800 block group-hover:text-blue-600">Collect Email</span>
+                 <span className="text-[10px] text-slate-500">Automatically collects visitor email if the sheet has an 'Email' column. (Automatically enforces User Login)</span>
               </div>
             </label>
 
             {/* Allowed Domain filtering */}
             {formConfig.settings?.requireMicrosoftLogin && (
-              <div className="pl-6">
+              <div className="pl-6 mb-2">
                  <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Restrict to Domain(s)</label>
                  <input type="text" placeholder="e.g. yourcompany.com" value={formConfig.settings?.allowedDomains || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, allowedDomains: e.target.value }})} className="w-full sm:w-1/2 p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />
                  <span className="text-[9px] text-slate-400 block mt-1">Leave blank to allow any Microsoft account. Seperate with commas for multiple domains.</span>
               </div>
             )}
 
-            {/* Require Microsoft Login */}
+            {/* Prevent Empty Submissions */}
             <label className="flex items-start gap-3 cursor-pointer group mb-2">
-              <input type="checkbox" checked={!!formConfig.settings?.requireMicrosoftLogin} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, requireMicrosoftLogin: e.target.checked }})} className="mt-0.5" />
+              <input type="checkbox" checked={!!formConfig.settings?.preventEmptySubmissions} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, preventEmptySubmissions: e.target.checked }})} className="mt-0.5" />
               <div>
-                 <span className="text-xs font-bold text-slate-800 block group-hover:text-blue-600">Require M365 Login & Collect Emails</span>
-                 <span className="text-[10px] text-slate-500">Forces users to authenticate before viewing or submitting the form. Automatically collects visitor email if the sheet has an 'Email' column.</span>
+                 <span className="text-xs font-bold text-slate-800 block group-hover:text-blue-600">Prevent Empty Submissions</span>
+                 <span className="text-[10px] text-slate-500">If checked, a form cannot be submitted if all fields are left completely blank.</span>
               </div>
             </label>
+
+            {/* Configure Generate Submission Sequence */}
+            <div className="pt-3 mb-2 border-t border-slate-200">
+               <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Submission ID Format</label>
+               <div className="flex gap-2 items-center">
+                 <input type="text" placeholder="Prefix (e.g. S-)" value={formConfig.settings?.submissionPrefix || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, submissionPrefix: e.target.value }})} className="w-1/3 p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />
+                 <input type="number" placeholder="Start # (e.g. 1)" value={formConfig.settings?.submissionStartNumber || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, submissionStartNumber: parseInt(e.target.value, 10) || 1 }})} className="w-1/3 p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />
+               </div>
+               <span className="text-[9px] text-slate-400 block mt-1">Sets the format for Sequential Submission IDs. Will look like format Prefix00Number</span>
+            </div>
 
             {/* Allow Multiple Submissions */}
             <label className="flex items-start gap-3 cursor-pointer group">
@@ -1155,10 +1212,21 @@ export default function MicrosoftConnector({
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:col-span-2">
-                <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Accent Theme Color</label>
-                <div className="flex items-center gap-2">
-                   <input type="color" value={formConfig.settings?.themeColor || '#2563eb'} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, themeColor: e.target.value }})} className="w-8 h-8 rounded border-none cursor-pointer p-0 block bg-transparent" />
-                   <span className="text-[11px] font-mono font-medium text-slate-500">{formConfig.settings?.themeColor || '#2563eb'}</span>
+                <div className="flex flex-col sm:flex-row gap-6">
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Accent Theme Color</label>
+                        <div className="flex items-center gap-2">
+                           <input type="color" value={formConfig.settings?.themeColor || '#2563eb'} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, themeColor: e.target.value }})} className="w-8 h-8 rounded border-none cursor-pointer p-0 block bg-transparent" />
+                           <span className="text-[11px] font-mono font-medium text-slate-500">{formConfig.settings?.themeColor || '#2563eb'}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Background Color</label>
+                        <div className="flex items-center gap-2">
+                           <input type="color" value={formConfig.settings?.backgroundColor || '#f8fafc'} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, backgroundColor: e.target.value }})} className="w-8 h-8 rounded border-none cursor-pointer p-0 block bg-transparent" />
+                           <span className="text-[11px] font-mono font-medium text-slate-500">{formConfig.settings?.backgroundColor || '#f8fafc'}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
          </div>

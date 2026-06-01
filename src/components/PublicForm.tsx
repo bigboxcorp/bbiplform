@@ -45,7 +45,43 @@ export default function PublicForm({ formId }: { formId: string }) {
                     }
                 }
                 if (!isAllowed) {
-                    setTimeError('This form is currently closed and only accepts submissions during specific times of the day.');
+                    let nextSlot = null;
+                    let nextSlotTomorrow = null;
+
+                    // Sort ranges by start time
+                    const sortedRanges = [...ranges].sort((a: any, b: any) => {
+                         if (!a.start || !b.start) return 0;
+                         const aMins = parseInt(a.start.split(':')[0]) * 60 + parseInt(a.start.split(':')[1]);
+                         const bMins = parseInt(b.start.split(':')[0]) * 60 + parseInt(b.start.split(':')[1]);
+                         return aMins - bMins;
+                    });
+
+                    for (const r of sortedRanges) {
+                         if (r.start && r.end) {
+                             const sH = parseInt(r.start.split(':')[0]);
+                             const sM = parseInt(r.start.split(':')[1]);
+                             const startMinutes = sH * 60 + sM;
+                             if (startMinutes > currentMinutes) {
+                                 nextSlot = r;
+                                 break;
+                             }
+                             if (!nextSlotTomorrow) nextSlotTomorrow = r;
+                         }
+                    }
+
+                    if (!nextSlot && nextSlotTomorrow) nextSlot = nextSlotTomorrow;
+
+                    if (nextSlot) {
+                       const formatTime = (timeStr: string) => {
+                           let [h, m] = timeStr.split(':').map(Number);
+                           const ampm = h >= 12 ? 'PM' : 'AM';
+                           h = h % 12 || 12;
+                           return `${h}:${m < 10 ? '0'+m : m} ${ampm}`;
+                       };
+                       setTimeError(`This form is currently closed. It will open again at ${formatTime(nextSlot.start)} to ${formatTime(nextSlot.end)}.`);
+                    } else {
+                       setTimeError('This form is currently closed and only accepts submissions during specific times of the day.');
+                    }
                 }
             }
         }
@@ -105,7 +141,23 @@ export default function PublicForm({ formId }: { formId: string }) {
      }
   }, [formData, respondentTokens, validProfileChecked]);
 
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutTimer, setLockoutTimer] = useState(0);
+
+  useEffect(() => {
+    let t: NodeJS.Timeout;
+    if (lockoutTimer > 0) {
+      t = setTimeout(() => {
+         setLockoutTimer(lockoutTimer - 1);
+         if (lockoutTimer - 1 === 0) setFailedAttempts(0);
+      }, 1000);
+    }
+    return () => clearTimeout(t);
+  }, [lockoutTimer]);
+
   const handleRespondentLogin = async () => {
+    if (lockoutTimer > 0) return;
+
     try {
       setIsLoggingIn(true);
       const clientRedirectUri = `${window.location.origin}/auth/callback`;
@@ -120,31 +172,69 @@ export default function PublicForm({ formId }: { formId: string }) {
         return;
       }
 
+      let intervalId: NodeJS.Timeout;
+
+      const recordFailure = () => {
+         const newFails = failedAttempts + 1;
+         setFailedAttempts(newFails);
+         if (newFails >= 3) {
+            setLockoutTimer(60);
+            setAuthError('Too many failed attempts. Try again in 60 seconds.');
+         } else {
+            setAuthError('Login closed or failed. Please try again.');
+         }
+         setIsLoggingIn(false);
+      };
+
       const handleMsg = (e: MessageEvent) => {
         const origin = e.origin;
         if (origin !== window.location.origin) return;
         if (e.data?.type === 'OAUTH_AUTH_SUCCESS') {
+          clearInterval(intervalId);
+          window.removeEventListener('message', handleMsg);
           const authTokens = e.data.tokens as MSTokens;
           setRespondentTokens(authTokens);
           localStorage.setItem('respondent_tokens', JSON.stringify(authTokens));
+          setAuthError(null);
+          setFailedAttempts(0);
           setIsLoggingIn(false);
-          window.removeEventListener('message', handleMsg);
         } else if (e.data?.type === 'OAUTH_AUTH_ERROR') {
-          alert(`Auth Error: ${e.data.error}`);
-          setIsLoggingIn(false);
+          clearInterval(intervalId);
           window.removeEventListener('message', handleMsg);
+          recordFailure();
         }
       };
+
       window.addEventListener('message', handleMsg);
+
+      intervalId = setInterval(() => {
+         if (authWindow.closed) {
+             clearInterval(intervalId);
+             window.removeEventListener('message', handleMsg);
+             recordFailure();
+         }
+      }, 1000);
+
     } catch (err: any) {
       alert(err.message);
       setIsLoggingIn(false);
     }
   };
 
+  const getBgStyle = () => {
+    let style: any = {};
+    if (formData?.config.settings?.backgroundColor) {
+        style.backgroundColor = formData.config.settings.backgroundColor;
+    }
+    if (formData?.config.settings?.coverUrl) {
+        style.backgroundImage = `url(${formData.config.settings.coverUrl})`;
+    }
+    return style;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50" style={getBgStyle()}>
         <div className="text-center font-medium text-slate-500 animate-pulse">Loading form...</div>
       </div>
     );
@@ -152,7 +242,7 @@ export default function PublicForm({ formId }: { formId: string }) {
 
   if (error || !formData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50" style={getBgStyle()}>
         <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200">
           <h2 className="font-bold text-lg mb-2">Unavailable</h2>
           <p className="text-sm">{error || 'Could not load the requested form.'}</p>
@@ -163,7 +253,7 @@ export default function PublicForm({ formId }: { formId: string }) {
 
   if ((formData.config.settings?.requireMicrosoftLogin || formData.config.settings?.allowMultipleSubmissions === false) && (!respondentTokens || !validProfileChecked)) {
     return (
-       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={{ backgroundImage: formData?.config.settings?.coverUrl ? `url(${formData.config.settings.coverUrl})` : 'none' }}>
+       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
             {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" className="h-12 mx-auto mb-4" />}
             <h1 className="text-xl font-bold text-slate-800 mb-2">Login Required</h1>
@@ -171,11 +261,11 @@ export default function PublicForm({ formId }: { formId: string }) {
             {authError && <div className="mb-4 text-xs font-bold text-rose-600 bg-rose-50 p-2 rounded border border-rose-200">{authError}</div>}
             <button 
               onClick={handleRespondentLogin}
-              disabled={isLoggingIn}
+              disabled={isLoggingIn || lockoutTimer > 0}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:opacity-50 shadow-sm"
-              style={formData.config.settings?.themeColor ? { backgroundColor: formData.config.settings.themeColor } : {}}
+              style={formData.config.settings?.themeColor && lockoutTimer === 0 ? { backgroundColor: formData.config.settings.themeColor } : {}}
             >
-              {isLoggingIn ? 'Connecting...' : 'Sign in with Microsoft'}
+              {lockoutTimer > 0 ? `Try again in ${lockoutTimer}s` : isLoggingIn ? 'Connecting...' : 'Sign in with Microsoft'}
             </button>
          </div>
        </div>
@@ -184,7 +274,7 @@ export default function PublicForm({ formId }: { formId: string }) {
 
   if (timeError) {
     return (
-       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={{ backgroundImage: formData?.config.settings?.coverUrl ? `url(${formData.config.settings.coverUrl})` : 'none' }}>
+       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
             {formData?.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" className="h-12 mx-auto mb-4" />}
             <h1 className="text-2xl font-bold text-slate-800 mb-2">Form Closed</h1>
@@ -196,8 +286,8 @@ export default function PublicForm({ formId }: { formId: string }) {
 
   if (hasAlreadySubmitted) {
     return (
-       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
+       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
+         <div className="bg-white/95 p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
             {formData.config.settings?.logoUrl && <img src={formData.config.settings.logoUrl} alt="Logo" className="h-12 mx-auto mb-4" />}
             <h1 className="text-xl font-bold text-slate-800 mb-2">Already Responded</h1>
             <p className="text-sm text-slate-500 mb-6">You can only fill out this form once.</p>
@@ -207,8 +297,13 @@ export default function PublicForm({ formId }: { formId: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 bg-cover bg-center" style={getBgStyle()}>
+      <div className="max-w-3xl mx-auto relative">
+        {formData.config.settings?.requireMicrosoftLogin && validProfileChecked && (window as any).respondentEmail && (
+           <div className="absolute -top-7 right-0 text-[10px] text-slate-500 bg-white/50 px-2 py-0.5 rounded backdrop-blur border border-slate-200">
+             Logged in as: <span className="font-semibold text-slate-700">{(window as any).respondentEmail}</span>
+           </div>
+        )}
         <FormSubmissionForm 
            formConfig={formData.config} 
            formId={formData.id} 

@@ -10,6 +10,10 @@ dotenv.config();
 
 // Initialize SQLite database
 const db = new Database('data.db', { verbose: console.log });
+
+// Safe migrations
+try { db.exec(`ALTER TABLE forms ADD COLUMN submissionCounter INTEGER DEFAULT 0;`); } catch(e) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS forms (
     id TEXT PRIMARY KEY,
@@ -18,7 +22,8 @@ db.exec(`
     creatorTokens TEXT,
     creatorEmail TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    submissionCounter INTEGER DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS edit_logs (
     id TEXT PRIMARY KEY,
@@ -451,13 +456,43 @@ async function startServer() {
     }
   });
 
+  app.post('/api/forms/:id/generate-id', (req, res) => {
+    try {
+      const formId = req.params.id;
+      
+      db.prepare('BEGIN IMMEDIATE').run();
+      const formRow = db.prepare(`SELECT config, submissionCounter FROM forms WHERE id = ?`).get(formId) as { config: string, submissionCounter: number | null };
+      if (!formRow) {
+          db.prepare('ROLLBACK').run();
+          return res.status(404).json({ error: 'Form not found' });
+      }
+      
+      const currentCounter = formRow.submissionCounter || 0;
+      const nextCounter = currentCounter + 1;
+      
+      db.prepare(`UPDATE forms SET submissionCounter = ? WHERE id = ?`).run(nextCounter, formId);
+      db.prepare('COMMIT').run();
+      
+      const config = JSON.parse(formRow.config);
+      const prefix = config.settings.submissionPrefix || 'S-';
+      const startNum = config.settings.submissionStartNumber !== undefined ? config.settings.submissionStartNumber : 1;
+      
+      const finalNum = startNum + nextCounter - 1;
+      const finalStr = finalNum.toString().padStart(3, '0');
+      const nextId = `${prefix}${finalStr}`;
+
+      res.json({ nextId });
+    } catch(err: any) {
+      try { db.prepare('ROLLBACK').run(); } catch(e) {}
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post('/api/forms/:id/record-submission', (req, res) => {
     try {
       const formId = req.params.id;
       const { email } = req.body;
-      if (email) {
-         db.prepare(`INSERT INTO submissions_log (id, formId, userEmail) VALUES (?, ?, ?)`).run(uuidv4(), formId, email);
-      }
+      db.prepare(`INSERT INTO submissions_log (id, formId, userEmail) VALUES (?, ?, ?)`).run(uuidv4(), formId, email || 'anonymous');
       res.json({ success: true });
     } catch(err: any) {
       res.status(500).json({ error: err.message });

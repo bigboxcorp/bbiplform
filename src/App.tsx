@@ -184,7 +184,8 @@ export default function App() {
          setActiveFormId(finalId);
       }
       
-      const pUrl = `${window.location.origin}/form/${finalId}`;
+      const baseOrigin = window.location.hostname === 'localhost' ? window.location.origin : `https://${window.location.host}`;
+      const pUrl = `${baseOrigin}/form/${finalId}`;
       setPublishedUrl(pUrl);
       
       if (!isNew) {
@@ -202,7 +203,8 @@ export default function App() {
     setFormConfig(config);
     setSaveConfig(excelConfig);
     if (id) {
-       setPublishedUrl(`${window.location.origin}/form/${id}`);
+       const baseOrigin = window.location.hostname === 'localhost' ? window.location.origin : `https://${window.location.host}`;
+       setPublishedUrl(`${baseOrigin}/form/${id}`);
     } else {
        setPublishedUrl(null);
     }
@@ -214,6 +216,12 @@ export default function App() {
     setSaveConfig(null);
     setPublishedUrl(null);
     setActiveTab('home');
+  };
+
+  const handleSignoutGlobal = () => {
+     setTokens(null);
+     setSaveConfig(null);
+     localStorage.removeItem('microsoft_tokens');
   };
 
   if (activeTab === 'home') {
@@ -233,6 +241,11 @@ export default function App() {
                 <div className={`w-2 h-2 rounded-full ${tokens ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
                 {tokens ? 'M365 Linked' : 'Integration Pending'}
               </div>
+              {tokens && (
+                 <button onClick={handleSignoutGlobal} className="text-xs text-rose-600 hover:text-rose-800 font-bold px-3 py-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200">
+                    Logout
+                 </button>
+              )}
             </div>
           </nav>
           <FormsHome onEditForm={handleEditForm} userEmail={userEmail} />
@@ -254,12 +267,26 @@ export default function App() {
         </div>
         
         <div className="hidden sm:flex items-center gap-4">
-          <div className={`flex items-center gap-2 text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-full border transition-colors ${
-            tokens && saveConfig ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${tokens && saveConfig ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-            {tokens && saveConfig ? 'M365 Linked' : 'Integration Pending'}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-full border transition-colors ${
+              tokens ? (saveConfig && formConfig.settings?.isMappingLocked === false ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-emerald-700 bg-emerald-50 border-emerald-200') : 'text-amber-700 bg-amber-50 border-amber-200'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${tokens ? (saveConfig && formConfig.settings?.isMappingLocked === false ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-amber-500'}`}></div>
+              {tokens ? (
+                  <span className="flex flex-col text-left leading-tight text-[10px]">
+                     <span className="font-bold text-xs">Connected Identity: {userEmail || 'Active'}</span>
+                     <span className={saveConfig && formConfig.settings?.isMappingLocked === false ? "opacity-100 font-bold" : "opacity-80"}>
+                        {saveConfig ? (formConfig.settings?.isMappingLocked === false ? 'Re-sync Setup Required' : 'M365 Database Linked') : 'Database mapping missing'}
+                     </span>
+                  </span>
+              ) : 'Integration Pending'}
+            </div>
           </div>
+          {tokens && (
+               <button onClick={handleSignoutGlobal} className="text-xs text-rose-600 hover:text-rose-800 font-bold px-3 py-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200">
+                  Logout
+               </button>
+          )}
         </div>
       </nav>
 
