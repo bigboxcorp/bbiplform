@@ -567,7 +567,9 @@ export default function MicrosoftConnector({
       // Keep registering listener for popMessage responses
       const handleMsg = (e: MessageEvent) => {
         const origin = e.origin;
-        if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+        if (origin !== window.location.origin) {
+          return;
+        }
           return;
         }
 

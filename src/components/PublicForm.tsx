@@ -122,7 +122,7 @@ export default function PublicForm({ formId }: { formId: string }) {
 
       const handleMsg = (e: MessageEvent) => {
         const origin = e.origin;
-        if (!origin.endsWith('.run.app') && !origin.includes('localhost')) return;
+        if (origin !== window.location.origin) return;
         if (e.data?.type === 'OAUTH_AUTH_SUCCESS') {
           const authTokens = e.data.tokens as MSTokens;
           setRespondentTokens(authTokens);
