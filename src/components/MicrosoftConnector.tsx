@@ -536,7 +536,7 @@ export default function MicrosoftConnector({
     });
   };
 
-  // 8. Trigger Microsoft OAuth auth-code popup flow
+// 8. Trigger Microsoft OAuth auth-code popup flow
   const handleConnectM365 = async () => {
     try {
       setAuthStatus('authorizing');
@@ -564,7 +564,7 @@ export default function MicrosoftConnector({
         return;
       }
 
-// Keep registering listener for popMessage responses
+      // Keep registering listener for popMessage responses
       const handleMsg = (e: MessageEvent) => {
         const origin = e.origin;
         if (origin !== window.location.origin) {
@@ -585,6 +585,11 @@ export default function MicrosoftConnector({
       };
 
       window.addEventListener('message', handleMsg);
+    } catch (err: any) {
+      setApiError(`OAuth Initialization failed: ${err.message}`);
+      setAuthStatus('idle');
+    }
+  };
 
   // 9. Signout Connection
   const handleSignout = () => {
