@@ -158,7 +158,7 @@ export default function MicrosoftConnector({
             setSelectedTeamId(saveConfig.groupId);
             setSelectedChannelId(saveConfig.channelId);
             setSelectedChannelName(saveConfig.channelName);
-            setSelectedFileId(saveConfig.fileId);
+            setSelectedFileId((saveConfig as any).fileId || saveConfig.driveItemId);
             setSelectedFileName(saveConfig.fileName);
             setSelectedTableName(saveConfig.tableName);
             setSelectedSheetName(saveConfig.sheetName);
@@ -171,15 +171,10 @@ export default function MicrosoftConnector({
             const files = await getExcelFilesInChannel(driveInfo.id, saveConfig.channelName, tokens, setTokens);
             setExcelFiles(files);
             
-            const sheetsList = await getWorkbookWorksheets(driveInfo.id, saveConfig.fileId, tokens, setTokens);
+            const sheetsList = await getWorkbookWorksheets(driveInfo.id, (saveConfig as any).fileId || saveConfig.driveItemId, tokens, setTokens);
             setWorksheets(sheetsList);
-            const tablesList = await getWorkbookTables(driveInfo.id, saveConfig.fileId, tokens, setTokens);
+            const tablesList = await getWorkbookTables(driveInfo.id, (saveConfig as any).fileId || saveConfig.driveItemId, tokens, setTokens);
             setTables(tablesList);
-            
-            const cols = await getTableColumns(driveInfo.id, saveConfig.fileId, saveConfig.tableName, tokens, setTokens);
-            setTableColumns(cols.map(c => c.name));
-
-            setFieldMappings(saveConfig.columnsMapping || {});
          } catch(e) { console.warn(e); } finally { setIsLoading(false); }
        }
     };
@@ -340,7 +335,7 @@ export default function MicrosoftConnector({
       const result = await createExcelFileWithTable(
         driveId,
         selectedChannelName,
-        finalFileName,
+        autoName,
         'Sheet1',
         headers,
         tokens,
@@ -388,7 +383,7 @@ export default function MicrosoftConnector({
       });
       setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: true } });
 
-      alert(`✅ Auto Setup Complete! File "${finalFileName}" created and mapped automatically.`);
+      alert(`✅ Auto Setup Complete! File "${autoName}" created and mapped automatically.`);
     } catch(err: any) {
        setApiError(`Could not auto-setup Excel File: ${err.message}`);
     } finally {
@@ -676,11 +671,13 @@ export default function MicrosoftConnector({
       window.addEventListener('message', handleMsg);
       
       checkInterval = setInterval(() => {
-          if (authWindow.closed) {
-             clearInterval(checkInterval);
-             window.removeEventListener('message', handleMsg);
-             
-             // Check if already succeeded (status updated)
+         try {
+           if (authWindow?.closed) {
+              clearInterval(checkInterval);
+              window.removeEventListener('message', handleMsg);
+              
+              // Check if already succeeded (status updated)
+
              // We use a small timeout to let messages process
              setTimeout(() => {
                 setAuthStatus(prev => {
@@ -699,6 +696,7 @@ export default function MicrosoftConnector({
                 });
              }, 500);
           }
+        } catch (e) {}
       }, 1000);
     } catch (err: any) {
       setApiError(`OAuth Initialization failed: ${err.message}`);

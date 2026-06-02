@@ -219,11 +219,15 @@ export default function PublicForm({ formId }: { formId: string }) {
       window.addEventListener('message', handleMsg);
 
       intervalId = setInterval(() => {
-         if (authWindow.closed) {
-             clearInterval(intervalId);
-             window.removeEventListener('message', handleMsg);
-             recordFailure();
-         }
+        try {
+          if (authWindow?.closed) {
+              clearInterval(intervalId);
+              window.removeEventListener('message', handleMsg);
+              recordFailure();
+          }
+        } catch (e) {
+          // Ignore COOP block errors for authWindow.closed
+        }
       }, 1000);
 
     } catch (err: any) {

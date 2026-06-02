@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormConfig, FormField } from '../types';
-import { Plus, Trash, Type, List, Calendar, Hash, GripVertical, Check } from 'lucide-react';
+import { Plus, Trash, Type, AlignLeft, Calendar, Hash, GripVertical, Check } from 'lucide-react';
 
 interface FormBuilderProps {
   config: FormConfig;
@@ -163,7 +163,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                     {(field.type === 'short_text' || field.type === 'long_text') && <Type size={14} />}
                     {field.type === 'number' && <Hash size={14} />}
                     {field.type === 'date' && <Calendar size={14} />}
-                    {(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox') && <List size={14} />}
+                    {(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox') && <AlignLeft size={14} />}
                     {field.type === 'section_break' && <Hash size={14} />}
                   </span>
                   

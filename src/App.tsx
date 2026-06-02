@@ -16,7 +16,8 @@ import {
   Copy,
   ExternalLink,
   Share2,
-  ChevronLeft
+  ChevronLeft,
+  FileText
 } from 'lucide-react';
 
 export default function App() {
@@ -142,11 +143,15 @@ export default function App() {
       window.addEventListener('message', handleMsg);
       
       intervalId = setInterval(() => {
-         if (authWindow.closed) {
-             clearInterval(intervalId);
-             window.removeEventListener('message', handleMsg);
-             recordFailure();
-         }
+        try {
+          if (authWindow?.closed) {
+              clearInterval(intervalId);
+              window.removeEventListener('message', handleMsg);
+              recordFailure();
+          }
+        } catch (e) {
+          // Ignore COOP block errors for authWindow.closed
+        }
       }, 1000);
 
     } catch (err: any) {
@@ -385,7 +390,7 @@ export default function App() {
         </div>
       </div>
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <section className={`flex flex-col min-w-0 ${activeTab === 'designer' ? 'lg:col-span-8 pr-0 lg:pr-6 border-r border-slate-200' : 'lg:col-span-12'}`}>
           <div className="flex-1 flex flex-col">
             {activeTab === 'designer' && (
@@ -422,7 +427,7 @@ export default function App() {
 
                 <div className="bg-blue-50/50 rounded-lg border border-blue-100 p-3 mt-4 text-xs">
                   <h4 className="text-[10px] uppercase font-bold text-blue-600 mb-2 flex items-center gap-1.5">
-                    <List size={12} /> Monitor Responses
+                    <FileText size={12} /> Monitor Responses
                   </h4>
                   <div className="flex bg-white border border-blue-200 rounded-md overflow-hidden shadow-xs">
                     <input type="text" readOnly value={publishedUrl.replace('/form/', '/responses/')} className="w-full text-[11px] text-slate-700 pl-2 py-1.5 bg-transparent focus:outline-none" />
