@@ -55,15 +55,6 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
         </div>
         
         <div className="flex flex-col sm:items-end gap-3">
-          {userEmail && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-100 shadow-xs">
-              <CheckCircle size={14} className="text-emerald-500" />
-              <div className="flex flex-col text-xs">
-                <span className="font-semibold">M365 Database Linked</span>
-                <span>Connected Identity: {userEmail}</span>
-              </div>
-            </div>
-          )}
           <button onClick={handleCreateNew} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer">
             <Plus size={16} /> Create New Form
           </button>

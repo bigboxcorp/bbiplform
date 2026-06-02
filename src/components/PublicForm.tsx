@@ -324,6 +324,7 @@ export default function PublicForm({ formId }: { formId: string }) {
            formId={formData.id} 
            saveConfig={formData.excelConfig} 
            publicMode={true}
+           userEmail={respondentEmail}
         />
       </div>
     </div>

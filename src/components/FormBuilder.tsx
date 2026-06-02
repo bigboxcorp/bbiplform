@@ -151,7 +151,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
             <span className="text-xs text-slate-450 font-medium block">No custom user fields defined yet. Choose a preset template above or add custom fields below.</span>
           </div>
         ) : (
-          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-3">
             {config.fields.map((field, idx) => (
               <div 
                 key={field.id} 
@@ -347,23 +347,32 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
       </div>
 
       {/* Add Field interface */}
-      <form onSubmit={addField} className="pt-5 border-t border-slate-200" id="add-field-form">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2 px-1">➕ Append New Column Field</span>
-        <div className="flex flex-col gap-3">
+      <form onSubmit={addField} className="mt-8 bg-blue-50/40 border border-blue-200/60 rounded-xl p-5 shadow-sm" id="add-field-form">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-blue-100 text-blue-600 p-1.5 rounded-md">
+            <Plus size={16} />
+          </div>
+          <span className="text-[13px] font-bold text-slate-700 uppercase tracking-wider block">Append New Column / Field</span>
+        </div>
+        <div className="flex flex-col gap-4">
            <div className="flex flex-col sm:flex-row gap-3">
-             <input 
-               type="text" 
-               value={newFieldLabel}
-               onChange={(e) => setNewFieldLabel(e.target.value)}
-               placeholder="Field Label (e.g. Employee Name, Quantity)"
-               className="flex-1 text-sm px-4 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
-               id="new-field-label-input"
-             />
-             <div className="flex gap-2">
+             <div className="flex-1 space-y-1.5">
+               <label className="text-[11px] font-semibold text-slate-500 uppercase">Field Label</label>
+               <input 
+                 type="text" 
+                 value={newFieldLabel}
+                 onChange={(e) => setNewFieldLabel(e.target.value)}
+                 placeholder="e.g. Employee Name, Quantity"
+                 className="w-full text-sm px-4 py-2 bg-white rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-medium shadow-xs"
+                 id="new-field-label-input"
+               />
+             </div>
+             <div className="sm:w-64 space-y-1.5">
+               <label className="text-[11px] font-semibold text-slate-500 uppercase">Input Type</label>
                <select
                  value={newFieldType}
                  onChange={(e) => setNewFieldType(e.target.value as FormField['type'])}
-                 className="text-sm px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none text-slate-700 font-semibold focus:ring-2 focus:ring-blue-500"
+                 className="w-full text-sm px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-700 font-semibold shadow-xs"
                  id="new-field-type-select"
                >
                  <option value="short_text">Short Text</option>

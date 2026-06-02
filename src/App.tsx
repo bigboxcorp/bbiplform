@@ -293,14 +293,19 @@ export default function App() {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-2 text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-full border transition-colors ${
+              <div className={`hidden sm:flex items-center gap-2 text-xs sm:text-sm font-medium px-3.5 py-1.5 rounded-full border transition-colors ${
                 tokens ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200'
               }`}>
                 <div className={`w-2 h-2 rounded-full ${tokens ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                {tokens ? 'M365 Linked' : 'Integration Pending'}
+                {tokens ? (
+                  <span className="flex flex-col text-left leading-tight text-[10px]">
+                     <span className="font-bold text-xs">Connected Identity: {userEmail || 'Active'}</span>
+                     <span className="opacity-80 font-bold">M365 Database Linked</span>
+                  </span>
+                ) : 'Integration Pending'}
               </div>
               {tokens && (
-                 <button onClick={handleSignoutGlobal} className="text-xs text-rose-600 hover:text-rose-800 font-bold px-3 py-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200">
+                 <button onClick={handleSignoutGlobal} className="text-xs text-rose-600 hover:text-rose-800 font-bold px-3 py-1.5 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors border border-rose-200 cursor-pointer">
                     Logout
                  </button>
               )}
@@ -348,7 +353,7 @@ export default function App() {
         </div>
       </nav>
 
-      <div className="bg-slate-100/65 border-b border-slate-250 py-2.5 px-4 sm:px-6 shrink-0 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-slate-100/90 backdrop-blur-md border-b border-slate-200 py-2.5 px-4 sm:px-6 shrink-0 flex flex-wrap items-center justify-between gap-4 sticky top-16 z-40">
         <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-xs flex-wrap">
           <button
             onClick={() => setActiveTab('designer')}
@@ -405,7 +410,7 @@ export default function App() {
                 <p className="text-xs text-emerald-700 mb-4 font-medium leading-relaxed">
                   Your form is currently live. People can fill this URL, and entries will go directly to your configured Excel sheet. You can edit the form and click "Update" above.
                 </p>
-                <div className="flex bg-white border border-emerald-200 rounded-lg overflow-hidden shadow-xs">
+                <div className="flex bg-white border border-emerald-200 rounded-lg overflow-hidden shadow-xs mb-3">
                    <input type="text" readOnly value={publishedUrl} className="w-full text-xs text-slate-700 pl-3 py-2 bg-transparent focus:outline-none" />
                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl); alert('Link copied!'); }} className="bg-emerald-100 hover:bg-emerald-200 px-3 text-emerald-800 transition-colors flex items-center justify-center shrink-0 border-l border-emerald-200 cursor-pointer" title="Copy">
                      <Copy size={13} />
@@ -413,6 +418,21 @@ export default function App() {
                    <a href={publishedUrl} target="_blank" rel="noopener noreferrer" className="bg-emerald-100 hover:bg-emerald-200 px-3 text-emerald-800 transition-colors flex items-center justify-center shrink-0 border-l border-emerald-200 cursor-pointer" title="Open Link">
                      <ExternalLink size={13} />
                    </a>
+                </div>
+
+                <div className="bg-blue-50/50 rounded-lg border border-blue-100 p-3 mt-4 text-xs">
+                  <h4 className="text-[10px] uppercase font-bold text-blue-600 mb-2 flex items-center gap-1.5">
+                    <List size={12} /> Monitor Responses
+                  </h4>
+                  <div className="flex bg-white border border-blue-200 rounded-md overflow-hidden shadow-xs">
+                    <input type="text" readOnly value={publishedUrl.replace('/form/', '/responses/')} className="w-full text-[11px] text-slate-700 pl-2 py-1.5 bg-transparent focus:outline-none" />
+                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl.replace('/form/', '/responses/')); alert('Link copied!'); }} className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Copy">
+                      <Copy size={12} />
+                    </button>
+                    <a href={publishedUrl.replace('/form/', '/responses/')} target="_blank" rel="noopener noreferrer" className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Open Link">
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
                 </div>
              </div>
            )}

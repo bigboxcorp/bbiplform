@@ -24,6 +24,7 @@ interface FormSubmissionFormProps {
   setSubmissions?: React.Dispatch<React.SetStateAction<FormSubmission[]>>;
   publicMode?: boolean;
   formId?: string;
+  userEmail?: string | null;
 }
 
 export default function FormSubmissionForm({
@@ -34,10 +35,12 @@ export default function FormSubmissionForm({
   submissions = [],
   setSubmissions,
   publicMode = false,
-  formId
+  formId,
+  userEmail
 }: FormSubmissionFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [recordEmailChecked, setRecordEmailChecked] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -247,7 +250,10 @@ export default function FormSubmissionForm({
       }
 
       if (publicMode && formId && saveConfig) {
-        let respondentEmail = (window as any).respondentEmail || '';
+        let respondentEmail = userEmail || (window as any).respondentEmail || '';
+        if (!recordEmailChecked) {
+           respondentEmail = ''; // don't record if unchecked
+        }
         // PUBLIC SUBMISSION VIA GRAPH PROXY
         let driveId = saveConfig.driveId;
         if (!driveId && saveConfig.driveItemId.includes('!')) {
@@ -355,7 +361,10 @@ export default function FormSubmissionForm({
               const fId = mappedFieldEntry[0];
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
-              if (fId === 'respondent_email') return typeof (window as any).respondentEmail !== 'undefined' ? ((window as any).respondentEmail || 'Anonymous') : 'Anonymous';
+              if (fId === 'respondent_email') {
+                  const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail) : '';
+                  return checkVal || 'Anonymous';
+              }
               const userVal = finalFormData[fId];
               return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
             }
@@ -364,7 +373,8 @@ export default function FormSubmissionForm({
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
             
             if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               return typeof (window as any).respondentEmail !== 'undefined' ? (window as any).respondentEmail : 'Admin / Owner';
+               const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail) : '';
+               return checkVal || 'Admin / Owner';
             }
 
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
@@ -528,6 +538,20 @@ export default function FormSubmissionForm({
           </div>
         ) : (
           <form onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
+            {formConfig.settings?.collectEmails && userEmail && (
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-start gap-2 text-xs">
+                <input 
+                  type="checkbox" 
+                  checked={recordEmailChecked}
+                  onChange={(e) => setRecordEmailChecked(e.target.checked)}
+                  id="record-email-check"
+                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="record-email-check" className="text-slate-600 font-medium cursor-pointer">
+                  Record my email address (<span className="font-bold text-slate-800">{userEmail}</span>) with this submission.
+                </label>
+              </div>
+            )}
             {submitStatus === 'error' && (
               <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 text-rose-800 text-xs font-semibold leading-relaxed">
                 <AlertTriangle size={15} className="text-rose-600 shrink-0 mt-0.5" />
