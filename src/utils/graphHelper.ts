@@ -85,22 +85,11 @@ export async function getProfile(tokens: MSTokens, setTokens: (t: MSTokens) => v
 export async function getJoinedTeams(tokens: MSTokens, setTokens: (t: MSTokens) => void) {
   try {
     const data = await fetchGraph('me/joinedTeams', tokens, setTokens);
-    if (data && data.value && data.value.length > 0) {
+    if (data && data.value) {
       return data.value;
     }
   } catch (err) {
-    console.warn("Failed to fetch joinedTeams, falling back to all Groups", err);
-  }
-  
-  try {
-    // Fallback: fetch groups the user is a member of
-    const fallbackData = await fetchGraph("me/memberOf?$select=id,displayName", tokens, setTokens);
-    if (fallbackData && fallbackData.value) {
-      // Return only objects that look like groups
-      return fallbackData.value.filter((item: any) => item['@odata.type'] === '#microsoft.graph.group' || item.displayName);
-    }
-  } catch (err) {
-    console.error("Fallback to groups also failed", err);
+    console.warn("Failed to fetch joinedTeams.", err);
   }
   return [];
 }
@@ -344,9 +333,14 @@ export async function createExcelFileWithTable(
   // Yes! The children endpoint with empty `"file": {}` creates a fully valid empty workbook on SharePoint!
   // This is a beautiful native Graph capability. Let's do that!
   
-  // First, we need to get the Item ID of the Channel folder so we can create a child under it.
-  const channelFolder = await fetchGraph(`drives/${driveId}/root:/${encodedChannel}`, tokens, setTokens);
-  const channelFolderId = channelFolder.id;
+  let channelFolderId = '';
+  if (channelName === 'Root Directory') {
+      const rootFolder = await fetchGraph(`drives/${driveId}/root`, tokens, setTokens);
+      channelFolderId = rootFolder.id;
+  } else {
+      const channelFolder = await fetchGraph(`drives/${driveId}/root:/${encodedChannel}`, tokens, setTokens);
+      channelFolderId = channelFolder.id;
+  }
 
   const createEndpoint = `drives/${driveId}/items/${channelFolderId}/children`;
   const fileObj = await fetchGraph(createEndpoint, tokens, setTokens, {

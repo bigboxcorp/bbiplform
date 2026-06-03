@@ -121,6 +121,7 @@ export default function PublicForm({ formId }: { formId: string }) {
              const email = profile.userPrincipalName || profile.mail || '';
              (window as any).respondentEmail = email;
              setRespondentEmail(email);
+             if (email) localStorage.setItem('microsoft_user_email', email);
              
              if (needsLogin) {
                  // If disable multiple submissions, check if already submitted
@@ -164,7 +165,10 @@ export default function PublicForm({ formId }: { formId: string }) {
     if (lockoutTimer > 0) {
       t = setTimeout(() => {
          setLockoutTimer(lockoutTimer - 1);
-         if (lockoutTimer - 1 === 0) setFailedAttempts(0);
+         if (lockoutTimer - 1 === 0) {
+            setFailedAttempts(0);
+            setAuthError(null);
+         }
       }, 1000);
     }
     return () => clearTimeout(t);

@@ -308,7 +308,6 @@ export default function App() {
                 <div className={`w-2 h-2 rounded-full ${tokens ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
                 {tokens ? (
                   <span className="flex flex-col text-left leading-tight text-[10px]">
-                     <span className="font-bold text-xs">Connected Identity: {userEmail || 'Active'}</span>
                      <span className="opacity-80 font-bold">M365 Database Linked</span>
                   </span>
                 ) : 'Integration Pending'}
@@ -346,7 +345,6 @@ export default function App() {
               <div className={`w-2 h-2 rounded-full ${tokens ? (saveConfig && formConfig.settings?.isMappingLocked === false ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-amber-500'}`}></div>
               {tokens ? (
                   <span className="flex flex-col text-left leading-tight text-[10px]">
-                     <span className="font-bold text-xs">Connected Identity: {userEmail || 'Active'}</span>
                      <span className={saveConfig && formConfig.settings?.isMappingLocked === false ? "opacity-100 font-bold" : "opacity-80"}>
                         {saveConfig ? (formConfig.settings?.isMappingLocked === false ? 'Re-sync Setup Required' : 'M365 Database Linked') : 'Database mapping missing'}
                      </span>
