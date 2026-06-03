@@ -214,6 +214,7 @@ export default function FormSubmissionForm({
                            uploadedResult = await uploadFilePublic(
                               driveId,
                               saveConfig.channelName || 'General',
+                              saveConfig.uploadFolderPath || '',
                               `${submissionId}_${file.name}`,
                               file,
                               formId
@@ -222,6 +223,7 @@ export default function FormSubmissionForm({
                            uploadedResult = await uploadFileSystem(
                               driveId,
                               saveConfig.channelName || 'General',
+                              saveConfig.uploadFolderPath || '',
                               `${submissionId}_${file.name}`,
                               file,
                               tokens,

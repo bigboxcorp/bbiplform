@@ -547,6 +547,7 @@ export async function createTableInWorksheet(
 export async function uploadFileSystem(
   driveId: string,
   channelName: string,
+  folderName: string,
   fileName: string,
   fileObj: File,
   tokens: MSTokens,
@@ -554,11 +555,15 @@ export async function uploadFileSystem(
 ) {
   const isSpecialRoot = channelName === 'Root Directory';
   const encodedChannel = encodeURIComponent(channelName);
+  const encodedFolder = folderName ? encodeURIComponent(folderName) : '';
   const encodedFileName = encodeURIComponent(fileName);
   
-  const endpoint = isSpecialRoot 
-      ? `drives/${driveId}/root:/${encodedFileName}:/content`
-      : `drives/${driveId}/root:/${encodedChannel}/${encodedFileName}:/content`;
+  let endpoint = '';
+  if (isSpecialRoot) {
+    endpoint = folderName ? `drives/${driveId}/root:/${encodedFolder}/${encodedFileName}:/content` : `drives/${driveId}/root:/${encodedFileName}:/content`;
+  } else {
+    endpoint = folderName ? `drives/${driveId}/root:/${encodedChannel}/${encodedFolder}/${encodedFileName}:/content` : `drives/${driveId}/root:/${encodedChannel}/${encodedFileName}:/content`;
+  }
   
   // Convert File to Base64
   return new Promise((resolve, reject) => {
@@ -591,17 +596,22 @@ export async function uploadFileSystem(
 export async function uploadFilePublic(
   driveId: string,
   channelName: string,
+  folderName: string,
   fileName: string,
   fileObj: File,
   formId: string
 ) {
   const isSpecialRoot = channelName === 'Root Directory';
   const encodedChannel = encodeURIComponent(channelName);
+  const encodedFolder = folderName ? encodeURIComponent(folderName) : '';
   const encodedFileName = encodeURIComponent(fileName);
   
-  const endpoint = isSpecialRoot 
-      ? `drives/${driveId}/root:/${encodedFileName}:/content`
-      : `drives/${driveId}/root:/${encodedChannel}/${encodedFileName}:/content`;
+  let endpoint = '';
+  if (isSpecialRoot) {
+    endpoint = folderName ? `drives/${driveId}/root:/${encodedFolder}/${encodedFileName}:/content` : `drives/${driveId}/root:/${encodedFileName}:/content`;
+  } else {
+    endpoint = folderName ? `drives/${driveId}/root:/${encodedChannel}/${encodedFolder}/${encodedFileName}:/content` : `drives/${driveId}/root:/${encodedChannel}/${encodedFileName}:/content`;
+  }
   
   // Convert File to Base64
   return new Promise((resolve, reject) => {

@@ -107,20 +107,6 @@ export default function MicrosoftConnector({
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [newTableName, setNewTableName] = useState('');
 
-  const handleClearTable = async () => {
-    if (!selectedFileId || !selectedTableName) return;
-    if (!confirm('Are you sure you want to clear all data in this table? This cannot be undone.')) return;
-    setIsModifyingTable(true);
-    try {
-      await clearTableData(driveId, selectedFileId, selectedTableName, tokens!, setTokens);
-      alert('Table data cleared successfully.');
-    } catch(err: any) {
-      alert('Failed to clear table: ' + err.message);
-    } finally {
-      setIsModifyingTable(false);
-    }
-  };
-
   const handleAddMissingColumns = async () => {
     if (!selectedFileId || !selectedTableName) return;
     setIsModifyingTable(true);
@@ -310,7 +296,9 @@ export default function MicrosoftConnector({
     const fileObj = excelFiles.find(f => f.id === fileId);
     if (!fileObj || !driveId || !tokens) return;
 
+    const baseName = (fileObj.name || '').replace(/\.xlsx?$/, '');
     setSelectedFileName(fileObj.name || '');
+    setUploadFolderPath(baseName);
 
     try {
       setIsLoading(true);
@@ -417,8 +405,9 @@ export default function MicrosoftConnector({
       setIsCreatingExcel(true);
       setApiError(null);
       
-      const baseName = newExcelFileName.trim();
-      const finalFileName = baseName.endsWith('.xlsx') ? baseName : `${baseName}.xlsx`;
+      const baseName = newExcelFileName.trim().replace(/\.xlsx?$/, '');
+      const finalFileName = `${baseName}.xlsx`;
+      setUploadFolderPath(baseName);
 
       // Derive headers from form fields (Required to set up table)
       const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
@@ -586,13 +575,15 @@ export default function MicrosoftConnector({
       return;
     }
 
+    const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+
     try {
        setIsModifyingTable(true);
        const existingCols = await getTableColumns(driveId, selectedFileId, selectedTableName, tokens!, setTokens);
        const colNames = existingCols.map((c: any) => c.name.toLowerCase());
        
        let mismatchedCols = false;
-       formConfig.fields.forEach(f => {
+       fieldsToSave.forEach(f => {
          if (!colNames.includes(f.label.trim().toLowerCase())) mismatchedCols = true;
        });
 
@@ -610,8 +601,6 @@ export default function MicrosoftConnector({
     }
 
     const teamObj = teams.find(t => t.id === selectedTeamId);
-    
-    const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
     
     // Auto map form fields to Table Columns if possible
     const mapping: Record<string, string> = {
@@ -938,20 +927,21 @@ export default function MicrosoftConnector({
                         <p className="text-[10px] text-slate-500 mb-2">Select a directory or create a new one for file uploads in this channel.</p>
                         
                         <div className="space-y-3">
-                          <select
+                          <input
+                            type="text"
+                            list="auto-folder-list-auto"
                             value={uploadFolderPath}
                             onChange={(e) => setUploadFolderPath(e.target.value)}
                             disabled={isLoading}
+                            placeholder="e.g. Submissions_Attachments"
                             className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
-                          >
-                            <option value="">-- Choose Folder --</option>
-                            <option value="Submissions_Attachments">Submissions_Attachments (Default)</option>
+                          />
+                          <datalist id="auto-folder-list-auto">
+                            <option value="Submissions_Attachments" />
                             {attachmentFolders.map(folder => (
-                              <option key={folder.id} value={folder.displayName || folder.name}>
-                                📁 {folder.displayName || folder.name}
-                              </option>
+                              <option key={folder.id} value={folder.displayName || folder.name} />
                             ))}
-                          </select>
+                          </datalist>
 
                           <div className="flex gap-2 items-center border-t border-slate-100 pt-3">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Create New:</span>
@@ -1036,20 +1026,21 @@ export default function MicrosoftConnector({
                         <p className="text-[10px] text-slate-500 mb-2">Select a directory or create a new one for file uploads in this channel.</p>
                         
                         <div className="space-y-3">
-                          <select
+                          <input
+                            type="text"
+                            list="auto-folder-list-manual"
                             value={uploadFolderPath}
                             onChange={(e) => setUploadFolderPath(e.target.value)}
                             disabled={isLoading}
+                            placeholder="e.g. Submissions_Attachments"
                             className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
-                          >
-                            <option value="">-- Choose Folder --</option>
-                            <option value="Submissions_Attachments">Submissions_Attachments (Default)</option>
+                          />
+                          <datalist id="auto-folder-list-manual">
+                            <option value="Submissions_Attachments" />
                             {attachmentFolders.map(folder => (
-                              <option key={folder.id} value={folder.displayName || folder.name}>
-                                📁 {folder.displayName || folder.name}
-                              </option>
+                              <option key={folder.id} value={folder.displayName || folder.name} />
                             ))}
-                          </select>
+                          </datalist>
 
                           <div className="flex gap-2 items-center border-t border-slate-100 pt-3">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Create New:</span>
