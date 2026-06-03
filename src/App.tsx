@@ -68,7 +68,9 @@ export default function App() {
         const t = JSON.parse(storedTokens);
         setTokens(t);
         getProfile(t, setTokens).then(p => {
-          setUserEmail(p.userPrincipalName || p.mail || null);
+          const mail = p.userPrincipalName || p.mail || null;
+          setUserEmail(mail);
+          if (mail) localStorage.setItem('microsoft_user_email', mail);
         }).catch(e => { console.error('Failed to get profile:', e); });
       } catch (e) {}
     }
@@ -128,7 +130,9 @@ export default function App() {
           localStorage.setItem('microsoft_tokens', JSON.stringify(authTokens));
           
           getProfile(authTokens, setTokens).then(p => {
-             setUserEmail(p.userPrincipalName || p.mail || null);
+             const mail = p.userPrincipalName || p.mail || null;
+             setUserEmail(mail);
+             if (mail) localStorage.setItem('microsoft_user_email', mail);
           }).catch(e => { console.error('Failed to get profile from login:', e); });
 
           setLoginFailedAttempts(0);
@@ -456,7 +460,7 @@ export default function App() {
                       <p>• Tab: {saveConfig.sheetName}</p>
                       <p>• Obj: {saveConfig.tableName}</p>
                       <p>• File: {saveConfig.fileName}</p>
-                      {saveConfig.uploadFolderPath && <p>• Attachments: {saveConfig.uploadFolderPath}</p>}
+                      <p>• Attachments Folder: {saveConfig.uploadFolderPath || saveConfig.fileName.replace(/\.xlsx?$/, '')}</p>
                     </div>
                   </div>
                 ) : (

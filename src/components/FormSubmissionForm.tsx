@@ -256,7 +256,7 @@ export default function FormSubmissionForm({
       }
 
       if (publicMode && formId && saveConfig) {
-        let respondentEmail = userEmail || (window as any).respondentEmail || '';
+        let respondentEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '';
         if (!recordEmailChecked) {
            respondentEmail = ''; // don't record if unchecked
         }
@@ -370,7 +370,7 @@ export default function FormSubmissionForm({
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
               if (fId === 'respondent_email') {
-                  const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail) : '';
+                  const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
                   return checkVal || 'Anonymous';
               }
               const userVal = finalFormData[fId];
@@ -381,7 +381,7 @@ export default function FormSubmissionForm({
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
             
             if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail) : '';
+               const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
                return checkVal || 'Admin / Owner';
             }
 

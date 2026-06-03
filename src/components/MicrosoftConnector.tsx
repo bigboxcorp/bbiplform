@@ -535,7 +535,8 @@ export default function MicrosoftConnector({
        setIsCreatingTable(true);
        setApiError(null);
        
-       const headers = ['Submission ID', 'Submitted At', ...formConfig.fields.map(f => f.label)];
+       const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+       const headers = ['Submission ID', 'Submitted At', ...fieldsToSave.map(f => f.label)];
        const tName = newTableName.trim().replace(/[^a-zA-Z0-9]/g, '');
 
        let startAddress = 'A1';
@@ -928,21 +929,33 @@ export default function MicrosoftConnector({
                         <p className="text-[10px] text-slate-500 mb-2">Select a directory or create a new one for file uploads in this channel.</p>
                         
                         <div className="space-y-3">
-                          <input
-                            type="text"
-                            list="auto-folder-list-auto"
-                            value={uploadFolderPath}
-                            onChange={(e) => setUploadFolderPath(e.target.value)}
-                            disabled={isLoading}
-                            placeholder="e.g. Submissions_Attachments"
-                            className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
-                          />
-                          <datalist id="auto-folder-list-auto">
-                            <option value="Submissions_Attachments" />
-                            {attachmentFolders.map(folder => (
-                              <option key={folder.id} value={folder.displayName || folder.name} />
-                            ))}
-                          </datalist>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={uploadFolderPath}
+                              onChange={(e) => setUploadFolderPath(e.target.value)}
+                              disabled={isLoading}
+                              placeholder="e.g. Submissions_Attachments"
+                              className="flex-1 text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
+                            />
+                            <select
+                              disabled={isLoading}
+                              value=""
+                              onChange={(e) => { 
+                                if (e.target.value) setUploadFolderPath(e.target.value); 
+                              }}
+                              className="w-10 text-xs text-slate-500 bg-slate-50 border border-slate-300 rounded cursor-pointer"
+                              title="Select existing folder"
+                            >
+                              <option value="" disabled>▾</option>
+                              <option value="Submissions_Attachments">Submissions_Attachments</option>
+                              {attachmentFolders.map(folder => (
+                                <option key={folder.id} value={folder.displayName || folder.name}>
+                                  📁 {folder.displayName || folder.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
 
                           <div className="flex gap-2 items-center border-t border-slate-100 pt-3">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Create New:</span>
@@ -1027,21 +1040,33 @@ export default function MicrosoftConnector({
                         <p className="text-[10px] text-slate-500 mb-2">Select a directory or create a new one for file uploads in this channel.</p>
                         
                         <div className="space-y-3">
-                          <input
-                            type="text"
-                            list="auto-folder-list-manual"
-                            value={uploadFolderPath}
-                            onChange={(e) => setUploadFolderPath(e.target.value)}
-                            disabled={isLoading}
-                            placeholder="e.g. Submissions_Attachments"
-                            className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
-                          />
-                          <datalist id="auto-folder-list-manual">
-                            <option value="Submissions_Attachments" />
-                            {attachmentFolders.map(folder => (
-                              <option key={folder.id} value={folder.displayName || folder.name} />
-                            ))}
-                          </datalist>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={uploadFolderPath}
+                              onChange={(e) => setUploadFolderPath(e.target.value)}
+                              disabled={isLoading}
+                              placeholder="e.g. Submissions_Attachments"
+                              className="flex-1 text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
+                            />
+                            <select
+                              disabled={isLoading}
+                              value=""
+                              onChange={(e) => { 
+                                if (e.target.value) setUploadFolderPath(e.target.value); 
+                              }}
+                              className="w-10 text-xs text-slate-500 bg-slate-50 border border-slate-300 rounded cursor-pointer"
+                              title="Select existing folder"
+                            >
+                              <option value="" disabled>▾</option>
+                              <option value="Submissions_Attachments">Submissions_Attachments</option>
+                              {attachmentFolders.map(folder => (
+                                <option key={folder.id} value={folder.displayName || folder.name}>
+                                  📁 {folder.displayName || folder.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
 
                           <div className="flex gap-2 items-center border-t border-slate-100 pt-3">
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Create New:</span>
