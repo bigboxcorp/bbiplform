@@ -273,7 +273,8 @@ export default function FormSubmissionForm({
         }
 
         let rowData: any[] = [];
-        const currentTimestampFormatted = new Date().toLocaleString('en-US', { timeZone: 'UTC' }) + ' UTC';
+        const dateObj1 = new Date();
+        const currentTimestampFormatted = dateObj1.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: '2-digit' }) + ' ' + dateObj1.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
         if (tableColumns.length > 0) {
           rowData = tableColumns.map((col: any) => {
@@ -347,7 +348,8 @@ export default function FormSubmissionForm({
         }
 
         let rowData: any[] = [];
-        const currentTimestampFormatted = new Date().toLocaleString('en-US', { timeZone: 'UTC' }) + ' UTC';
+        const dateObj2 = new Date();
+        const currentTimestampFormatted = dateObj2.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: '2-digit' }) + ' ' + dateObj2.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
         if (tableColumns.length > 0) {
           rowData = tableColumns.map((col: any) => {

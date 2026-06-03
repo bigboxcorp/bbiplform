@@ -456,6 +456,7 @@ export default function App() {
                       <p>• Tab: {saveConfig.sheetName}</p>
                       <p>• Obj: {saveConfig.tableName}</p>
                       <p>• File: {saveConfig.fileName}</p>
+                      {saveConfig.uploadFolderPath && <p>• Attachments: {saveConfig.uploadFolderPath}</p>}
                     </div>
                   </div>
                 ) : (

@@ -452,7 +452,7 @@ async function startServer() {
       const formId = req.params.id;
       if (!email) return res.json({ hasSubmitted: false });
       
-      const row = db.prepare(`SELECT id FROM submissions_log WHERE formId = ? AND userEmail = ?`).get(formId, email);
+      const row = db.prepare(`SELECT id FROM submissions_log WHERE formId = ? AND LOWER(userEmail) = LOWER(?)`).get(formId, email);
       res.json({ hasSubmitted: !!row });
     } catch(err: any) {
       res.status(500).json({ error: err.message });
@@ -487,6 +487,17 @@ async function startServer() {
       res.json({ nextId });
     } catch(err: any) {
       try { db.prepare('ROLLBACK').run(); } catch(e) {}
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/forms/:id/reset-counter', (req, res) => {
+    try {
+      const formId = req.params.id;
+      db.prepare(`UPDATE forms SET submissionCounter = 0 WHERE id = ?`).run(formId);
+      db.prepare(`DELETE FROM submissions_log WHERE formId = ?`).run(formId);
+      res.json({ success: true });
+    } catch(err: any) {
       res.status(500).json({ error: err.message });
     }
   });

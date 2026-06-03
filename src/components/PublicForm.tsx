@@ -110,8 +110,12 @@ export default function PublicForm({ formId }: { formId: string }) {
 
   const [timeError, setTimeError] = useState<string | null>(null);
 
+  const needsLogin = formData?.config?.settings?.requireMicrosoftLogin || 
+                     formData?.config?.settings?.allowMultipleSubmissions === false ||
+                     formData?.config?.settings?.collectEmails;
+
   useEffect(() => {
-     if (formData?.config?.settings?.requireMicrosoftLogin || formData?.config?.settings?.allowMultipleSubmissions === false) {
+     if (needsLogin) {
          if (respondentTokens && !validProfileChecked) {
              getProfile(respondentTokens, setRespondentTokens).then(async (profile) => {
                  const email = profile.userPrincipalName || profile.mail || '';
@@ -270,7 +274,7 @@ export default function PublicForm({ formId }: { formId: string }) {
     );
   }
 
-  if ((formData.config.settings?.requireMicrosoftLogin || formData.config.settings?.allowMultipleSubmissions === false) && (!respondentTokens || !validProfileChecked)) {
+  if (needsLogin && (!respondentTokens || !validProfileChecked)) {
     return (
        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
          <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">

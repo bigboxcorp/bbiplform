@@ -13,7 +13,9 @@ import {
   clearTableData,
   getTableColumns,
   createWorksheet,
-  createTableInWorksheet
+  createTableInWorksheet,
+  getFoldersInChannel,
+  createFolderInChannel
 } from '../utils/graphHelper';
 import { 
   Lock, 
@@ -94,6 +96,10 @@ export default function MicrosoftConnector({
   const [newExcelFileName, setNewExcelFileName] = useState('');
   const [isCreatingExcel, setIsCreatingExcel] = useState(false);
   const [isModifyingTable, setIsModifyingTable] = useState(false);
+  
+  const [attachmentFolders, setAttachmentFolders] = useState<any[]>([]);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   
   const [isCreatingWorksheet, setIsCreatingWorksheet] = useState(false);
   const [newWorksheetName, setNewWorksheetName] = useState('');
@@ -258,6 +264,7 @@ export default function MicrosoftConnector({
     setSelectedFileId('');
     setSelectedFileName('');
     setExcelFiles([]);
+    setAttachmentFolders([]);
 
     const selectedChanObj = channels.find(c => c.id === channelId);
     if (!selectedChanObj || !driveId || !tokens) return;
@@ -275,6 +282,16 @@ export default function MicrosoftConnector({
         setTokens
       );
       setExcelFiles(files);
+      
+      const folders = await getFoldersInChannel(
+        driveId,
+        selectedChanObj.displayName || '',
+        tokens,
+        setTokens
+      );
+      setAttachmentFolders(folders);
+      
+      if (!uploadFolderPath) setUploadFolderPath('Submissions_Attachments');
     } catch (err: any) {
       setApiError(`Failed to load Excel files in channel: ${err.message}`);
     } finally {
@@ -474,6 +491,32 @@ export default function MicrosoftConnector({
       setApiError(`Could not create new Excel File: ${err.message}`);
     } finally {
       setIsCreatingExcel(false);
+    }
+  };
+
+  const handleCreateNewFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim() || !driveId || !tokens || !selectedChannelName) return;
+
+    try {
+      setIsCreatingFolder(true);
+      setApiError(null);
+      await createFolderInChannel(
+        driveId,
+        selectedChannelName,
+        newFolderName.trim(),
+        tokens,
+        setTokens
+      );
+      
+      const folders = await getFoldersInChannel(driveId, selectedChannelName, tokens, setTokens);
+      setAttachmentFolders(folders);
+      setUploadFolderPath(newFolderName.trim());
+      setNewFolderName('');
+    } catch (err: any) {
+      setApiError(`Failed to create Folder: ${err.message}`);
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
@@ -892,14 +935,46 @@ export default function MicrosoftConnector({
                     {formConfig.fields.some(f => f.type === 'file') && (
                       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                         <label className="text-[11px] font-bold text-slate-800 block mb-1">Attachment Folder Path</label>
-                        <p className="text-[10px] text-slate-500 mb-2">Directory for file uploads in this channel.</p>
-                        <input 
-                          type="text" 
-                          value={uploadFolderPath}
-                          onChange={(e) => setUploadFolderPath(e.target.value)}
-                          placeholder="Submissions_Attachments"
-                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:ring-2 mt-1 focus:ring-blue-500 font-mono"
-                        />
+                        <p className="text-[10px] text-slate-500 mb-2">Select a directory or create a new one for file uploads in this channel.</p>
+                        
+                        <div className="space-y-3">
+                          <select
+                            value={uploadFolderPath}
+                            onChange={(e) => setUploadFolderPath(e.target.value)}
+                            disabled={isLoading}
+                            className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
+                          >
+                            <option value="">-- Choose Folder --</option>
+                            <option value="Submissions_Attachments">Submissions_Attachments (Default)</option>
+                            {attachmentFolders.map(folder => (
+                              <option key={folder.id} value={folder.displayName || folder.name}>
+                                📁 {folder.displayName || folder.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="flex gap-2 items-center border-t border-slate-100 pt-3">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Create New:</span>
+                            <div className="flex-1 flex gap-2">
+                              <input 
+                                type="text" 
+                                value={newFolderName}
+                                onChange={(e) => setNewFolderName(e.target.value)}
+                                placeholder="New Folder Name"
+                                disabled={isCreatingFolder}
+                                className="flex-1 text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:border-blue-500 shadow-xs"
+                              />
+                              <button 
+                                type="button"
+                                onClick={handleCreateNewFolder}
+                                disabled={isCreatingFolder || !newFolderName.trim()}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-800 disabled:opacity-50 rounded-lg text-[10px] font-bold px-3 py-1.5 flex items-center shadow-sm cursor-pointer transition-colors"
+                              >
+                                {isCreatingFolder ? '...' : 'Create Folder'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -958,14 +1033,46 @@ export default function MicrosoftConnector({
                     {formConfig.fields.some(f => f.type === 'file') && (
                       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                         <label className="text-[11px] font-bold text-slate-800 block mb-1">Attachment Folder Path</label>
-                        <p className="text-[10px] text-slate-500 mb-2">Directory for file uploads in this channel.</p>
-                        <input 
-                          type="text" 
-                          value={uploadFolderPath}
-                          onChange={(e) => setUploadFolderPath(e.target.value)}
-                          placeholder="Submissions_Attachments"
-                          className="w-full text-xs px-3 py-2 border border-slate-300 rounded focus:ring-2 mt-1 focus:ring-blue-500 font-mono"
-                        />
+                        <p className="text-[10px] text-slate-500 mb-2">Select a directory or create a new one for file uploads in this channel.</p>
+                        
+                        <div className="space-y-3">
+                          <select
+                            value={uploadFolderPath}
+                            onChange={(e) => setUploadFolderPath(e.target.value)}
+                            disabled={isLoading}
+                            className="w-full text-xs px-3 py-2 bg-white border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono shadow-xs"
+                          >
+                            <option value="">-- Choose Folder --</option>
+                            <option value="Submissions_Attachments">Submissions_Attachments (Default)</option>
+                            {attachmentFolders.map(folder => (
+                              <option key={folder.id} value={folder.displayName || folder.name}>
+                                📁 {folder.displayName || folder.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <div className="flex gap-2 items-center border-t border-slate-100 pt-3">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Create New:</span>
+                            <div className="flex-1 flex gap-2">
+                              <input 
+                                type="text" 
+                                value={newFolderName}
+                                onChange={(e) => setNewFolderName(e.target.value)}
+                                placeholder="New Folder Name"
+                                disabled={isCreatingFolder}
+                                className="flex-1 text-xs px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:border-blue-500 shadow-xs"
+                              />
+                              <button 
+                                type="button"
+                                onClick={handleCreateNewFolder}
+                                disabled={isCreatingFolder || !newFolderName.trim()}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-800 disabled:opacity-50 rounded-lg text-[10px] font-bold px-3 py-1.5 flex items-center shadow-sm cursor-pointer transition-colors"
+                              >
+                                {isCreatingFolder ? '...' : 'Create Folder'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -1063,13 +1170,6 @@ export default function MicrosoftConnector({
                         >
                            {isModifyingTable ? 'Working...' : 'Add Missing Form Columns'}
                         </button>
-                        <button 
-                           onClick={handleClearTable} 
-                           disabled={isModifyingTable}
-                           className="flex-1 text-[11px] border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-lg font-bold disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
-                        >
-                           Clear All Rows
-                        </button>
                       </div>
                       <button
                         onClick={handleApplyLayoutSelections}
@@ -1152,6 +1252,12 @@ export default function MicrosoftConnector({
                   <span className="text-[9px] text-emerald-600 block leading-none font-bold uppercase">Excel Table Target</span>
                   <span className="font-bold">{saveConfig.tableName}</span>
                 </div>
+                {saveConfig.uploadFolderPath && (
+                   <div className="mt-1 col-span-2">
+                     <span className="text-[9px] text-emerald-600 block leading-none font-bold uppercase">Attachment Target Folder</span>
+                     <span className="font-bold">{saveConfig.uploadFolderPath}</span>
+                   </div>
+                )}
               </div>
             </div>
           )}
@@ -1218,7 +1324,26 @@ export default function MicrosoftConnector({
 
             {/* Configure Generate Submission Sequence */}
             <div className="pt-3 mb-2 border-t border-slate-200">
-               <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Submission ID Format</label>
+               <div className="flex justify-between items-center mb-1">
+                 <label className="text-[10px] font-bold text-slate-700 uppercase">Submission ID Format</label>
+                 <button 
+                   onClick={async () => {
+                     if (!formId) return;
+                     if (!confirm('Are you sure you want to reset the Submission ID counter? This will start the numbering back from the Start # you provide.')) return;
+                     try {
+                        const res = await fetch(`/api/forms/${formId}/reset-counter`, { method: 'POST' });
+                        if (res.ok) {
+                           alert('Submission counter reset successfully!');
+                        }
+                     } catch(e) {
+                        alert('Could not reset sequence');
+                     }
+                   }}
+                   className="text-[10px] bg-amber-50 text-amber-700 hover:bg-amber-100 px-2 py-1 rounded font-semibold border border-amber-200 transition-colors"
+                 >
+                   Reset Counter
+                 </button>
+               </div>
                <div className="flex gap-2 items-center">
                  <input type="text" placeholder="Prefix (e.g. S-)" value={formConfig.settings?.submissionPrefix || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, submissionPrefix: e.target.value }})} className="w-1/3 p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />
                  <input type="number" placeholder="Start # (e.g. 1)" value={formConfig.settings?.submissionStartNumber || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, submissionStartNumber: parseInt(e.target.value, 10) || 1 }})} className="w-1/3 p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />

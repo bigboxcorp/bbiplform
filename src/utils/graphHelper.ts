@@ -109,23 +109,20 @@ export async function getJoinedTeams(tokens: MSTokens, setTokens: (t: MSTokens) 
  * Get folders for a specific Group's Drive
  */
 export async function getTeamChannels(groupId: string, driveId: string, tokens: MSTokens, setTokens: (t: MSTokens) => void) {
-  let folders = [];
+  let channels = [];
   try {
-    const data = await fetchGraph(`drives/${driveId}/root/children?$filter=folder ne null`, tokens, setTokens);
+    const data = await fetchGraph(`teams/${groupId}/channels`, tokens, setTokens);
     if (data && data.value) {
-      folders = data.value.map((f: any) => ({
-         id: f.id,
-         displayName: f.name
+      channels = data.value.map((c: any) => ({
+         id: c.id,
+         displayName: c.displayName
       }));
     }
   } catch (err) {
-    console.warn(`Failed to fetch folders for drive ${driveId}.`, err);
+    console.warn(`Failed to fetch proper channels for team ${groupId}.`, err);
   }
   
-  // Always add the root folder itself as an option
-  folders.unshift({ id: 'root', displayName: 'Root Directory' });
-  
-  return folders;
+  return channels;
 }
 
 /**
@@ -140,6 +137,59 @@ export async function getTeamDrive(groupId: string, tokens: MSTokens, setTokens:
  * List Excel Files inside a Teams channel.
  * Channel files are stored in a folder matching the channel name in the Team's drive.
  */
+export async function getFoldersInChannel(
+  driveId: string,
+  channelName: string,
+  tokens: MSTokens,
+  setTokens: (t: MSTokens) => void
+) {
+  const encodedChannel = encodeURIComponent(channelName);
+  try {
+    const isSpecialRoot = channelName === 'Root Directory';
+    const endpoint = isSpecialRoot ? `drives/${driveId}/root/children` : `drives/${driveId}/root:/${encodedChannel}:/children`;
+    
+    let data;
+    try {
+       data = await fetchGraph(endpoint, tokens, setTokens);
+    } catch (e: any) {
+       if (!isSpecialRoot) {
+           data = await fetchGraph(`drives/${driveId}/root/children`, tokens, setTokens);
+       } else {
+           throw e;
+       }
+    }
+    
+    if (data && data.value) {
+      return data.value.filter((item: any) => item.folder);
+    }
+    return [];
+  } catch (err: any) {
+    console.warn(`Could not list folders in channel folder "${channelName}".`, err);
+    return [];
+  }
+}
+
+export async function createFolderInChannel(
+  driveId: string,
+  channelName: string,
+  folderName: string,
+  tokens: MSTokens,
+  setTokens: (t: MSTokens) => void
+) {
+  const encodedChannel = encodeURIComponent(channelName);
+  const isSpecialRoot = channelName === 'Root Directory';
+  const endpoint = isSpecialRoot ? `drives/${driveId}/root/children` : `drives/${driveId}/root:/${encodedChannel}:/children`;
+  
+  return await fetchGraph(endpoint, tokens, setTokens, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: folderName,
+      folder: { },
+      "@microsoft.graph.conflictBehavior": "rename"
+    })
+  });
+}
+
 export async function getExcelFilesInChannel(
   driveId: string,
   channelName: string,
