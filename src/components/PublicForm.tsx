@@ -21,6 +21,12 @@ export default function PublicForm({ formId }: { formId: string }) {
         return res.json();
       })
       .then(data => {
+        if (!data.config?.settings?.isMappingLocked) {
+           setError('Form under maintenance. Please try again later.');
+           setLoading(false);
+           return;
+        }
+
         // Check local storage for multiple submissions rule before continuing
         if (data.config?.settings?.allowMultipleSubmissions === false) {
             if (localStorage.getItem(`__form_submitted_${data.id}`)) {
@@ -295,18 +301,6 @@ export default function PublicForm({ formId }: { formId: string }) {
             >
               {lockoutTimer > 0 ? `Try again in ${lockoutTimer}s` : isLoggingIn ? 'Connecting...' : 'Sign in with Microsoft'}
             </button>
-         </div>
-       </div>
-    );
-  }
-
-  if (formData?.config?.settings?.isMappingLocked === false) {
-    return (
-       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 bg-cover bg-center" style={getBgStyle()}>
-         <div className="bg-white/95 backdrop-blur p-8 rounded-2xl shadow-xl max-w-sm w-full text-center border border-slate-200">
-            {formData.config.settings?.logoUrl && <img src={secureUrl(formData.config.settings.logoUrl)} alt="Logo" style={{ height: formData.config.settings.logoSize ? `${Math.min(formData.config.settings.logoSize, 80)}px` : '48px' }} className="mx-auto mb-4 object-contain" />}
-            <h1 className="text-2xl font-bold text-slate-800 mb-2">Under Maintenance</h1>
-            <p className="text-sm text-slate-600 font-medium mb-6">This form is currently being updated and mapped. Please try again later.</p>
          </div>
        </div>
     );

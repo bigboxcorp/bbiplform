@@ -177,27 +177,32 @@ export default function FormSubmissionForm({
        }
     }
 
-    if (targetAction === 'goto_section' && targetSectionId) {
-       const sectionIndex = pages.findIndex(p => p[0]?.id === targetSectionId);
-       if (sectionIndex !== -1) {
-          setCurrentPage(sectionIndex);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-          return;
+    if (targetAction === 'goto_section') {
+       if (targetSectionId) {
+           const sectionIndex = pages.findIndex(p => p[0]?.id === targetSectionId);
+           if (sectionIndex !== -1) {
+              setCurrentPage(sectionIndex);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              return;
+           }
        }
        // if section not found, fallback to next
        targetAction = 'next';
-    } else if (targetAction === 'goto_section' && !targetSectionId) {
-       targetAction = 'next';
     }
 
-    if (targetAction === 'next' && currentPage < pages.length - 1) {
-       setCurrentPage(currentPage + 1);
-       window.scrollTo({ top: 0, behavior: 'smooth' });
-       return;
+    if (targetAction === 'next') {
+       if (currentPage < pages.length - 1) {
+          setCurrentPage(currentPage + 1);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+       } else {
+          // If next is triggered on the last page, it should submit
+          targetAction = 'submit';
+       }
     }
 
-    if (targetAction === 'submit' || currentPage === pages.length - 1) {
-       // Proceed to submit
+    if (targetAction === 'submit') {
+       // Proceed to submit (falls through)
     }
 
     let hasData = false;

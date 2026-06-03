@@ -336,9 +336,9 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                                      } else {
                                          const existing = jumps.findIndex(j => j.value === option);
                                          if (existing >= 0) {
-                                             jumps[existing] = { ...jumps[existing], action: newAction };
+                                            jumps[existing] = { ...jumps[existing], action: newAction };
                                          } else {
-                                             jumps.push({ value: option, action: newAction });
+                                            jumps.push({ value: option, action: newAction });
                                          }
                                      }
                                      updateField(field.id, { logicJumps: jumps });
