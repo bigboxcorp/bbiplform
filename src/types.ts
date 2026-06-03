@@ -32,6 +32,8 @@ export interface FormField {
 
   // Logic functionality
   logicJumps?: LogicJump[]; // e.g. [{ value: 'Yes', action: 'goto_section', targetSectionId: 'sec2' }]
+  sectionEndAction?: 'next' | 'submit' | 'goto_section';
+  sectionEndTarget?: string;
 }
 
 export interface TimeRange {

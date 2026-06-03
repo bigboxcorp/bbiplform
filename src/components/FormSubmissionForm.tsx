@@ -41,6 +41,7 @@ export default function FormSubmissionForm({
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [recordEmailChecked, setRecordEmailChecked] = useState<boolean>(true);
+  const [manualEmail, setManualEmail] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -108,6 +109,13 @@ export default function FormSubmissionForm({
 
     // Client-Side Validation for Current Page ONLY
     const errors: Record<string, string> = {};
+    if (currentPage === 0 && formConfig.settings?.collectEmails && !userEmail && recordEmailChecked) {
+      if (!manualEmail.trim()) {
+        errors['_manual_email'] = 'Email address is required.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manualEmail)) {
+        errors['_manual_email'] = 'Valid email address is required.';
+      }
+    }
     fieldsToRender.forEach(field => {
       if (field.type === 'section_break') return;
       const val = formData[field.id];
@@ -144,10 +152,50 @@ export default function FormSubmissionForm({
 
     setValidationErrors({});
 
-    if (currentPage < pages.length - 1) {
+    let targetAction: 'next' | 'submit' | 'goto_section' = 'next';
+    let targetSectionId: string | undefined = undefined;
+
+    // 1. Evaluate Logic Jumps in current page (last answered logic jump takes precedence)
+    const reversedFields = [...fieldsToRender].reverse();
+    for (const field of reversedFields) {
+       if (['radio', 'select'].includes(field.type) && field.logicJumps && formData[field.id]) {
+          const selectedVal = formData[field.id];
+          const jump = field.logicJumps.find((j: any) => j.value === selectedVal);
+          if (jump && jump.action) {
+             targetAction = jump.action;
+             targetSectionId = jump.targetSectionId;
+             break;
+          }
+       }
+    }
+
+    // 2. Fallback to Section End Action if no logic jump matched
+    if (targetAction === 'next' && fieldsToRender[0]?.type === 'section_break') {
+       if (fieldsToRender[0].sectionEndAction) {
+          targetAction = fieldsToRender[0].sectionEndAction;
+          targetSectionId = fieldsToRender[0].sectionEndTarget;
+       }
+    }
+
+    if (targetAction === 'goto_section' && targetSectionId) {
+       const sectionIndex = pages.findIndex(p => p[0]?.id === targetSectionId);
+       if (sectionIndex !== -1) {
+          setCurrentPage(sectionIndex);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+       }
+       // if section not found, fallback to next
+       targetAction = 'next';
+    }
+
+    if (targetAction === 'next' && currentPage < pages.length - 1) {
        setCurrentPage(currentPage + 1);
        window.scrollTo({ top: 0, behavior: 'smooth' });
        return;
+    }
+
+    if (targetAction === 'submit' || currentPage === pages.length - 1) {
+       // Proceed to submit
     }
 
     let hasData = false;
@@ -257,7 +305,9 @@ export default function FormSubmissionForm({
 
       if (publicMode && formId && saveConfig) {
         let respondentEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '';
-        if (!recordEmailChecked) {
+        if (formConfig.settings?.collectEmails && !userEmail) {
+           respondentEmail = manualEmail.trim();
+        } else if (!recordEmailChecked) {
            respondentEmail = ''; // don't record if unchecked
         }
         // PUBLIC SUBMISSION VIA GRAPH PROXY
@@ -370,7 +420,7 @@ export default function FormSubmissionForm({
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
               if (fId === 'respondent_email') {
-                  const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
+                  const checkVal = formConfig.settings?.collectEmails && !userEmail ? manualEmail.trim() : (recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '');
                   return checkVal || 'Anonymous';
               }
               const userVal = finalFormData[fId];
@@ -381,7 +431,7 @@ export default function FormSubmissionForm({
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
             
             if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               const checkVal = recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
+               const checkVal = formConfig.settings?.collectEmails && !userEmail ? manualEmail.trim() : (recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '');
                return checkVal || 'Admin / Owner';
             }
 
@@ -487,6 +537,26 @@ export default function FormSubmissionForm({
   const themeStyle = formConfig.settings?.themeColor ? { borderColor: formConfig.settings.themeColor } : {};
   const themeBgStyle = formConfig.settings?.themeColor ? { backgroundColor: formConfig.settings.themeColor } : {};
 
+  let targetActionDisplay: 'next' | 'submit' | 'goto_section' = 'next';
+  if (currentPage < pages.length - 1) {
+      if (fieldsToRender[0]?.type === 'section_break' && fieldsToRender[0].sectionEndAction) {
+          targetActionDisplay = fieldsToRender[0].sectionEndAction;
+      }
+      const reversedFieldsDisplay = [...fieldsToRender].reverse();
+      for (const field of reversedFieldsDisplay) {
+         if (['radio', 'select'].includes(field.type) && field.logicJumps && formData[field.id]) {
+            const selectedVal = formData[field.id];
+            const jump = field.logicJumps.find((j: any) => j.value === selectedVal);
+            if (jump && jump.action) {
+               targetActionDisplay = jump.action;
+               break;
+            }
+         }
+      }
+  } else {
+      targetActionDisplay = 'submit';
+  }
+
   return (
     <div className="space-y-6" id="form-submission-container">
       {formConfig.settings?.logoUrl && (
@@ -546,18 +616,45 @@ export default function FormSubmissionForm({
           </div>
         ) : (
           <form onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
-            {formConfig.settings?.collectEmails && userEmail && (
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg flex items-start gap-2 text-xs">
-                <input 
-                  type="checkbox" 
-                  checked={recordEmailChecked}
-                  onChange={(e) => setRecordEmailChecked(e.target.checked)}
-                  id="record-email-check"
-                  className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="record-email-check" className="text-slate-600 font-medium cursor-pointer">
-                  Record my email address (<span className="font-bold text-slate-800">{userEmail}</span>) with this submission.
-                </label>
+            {formConfig.settings?.collectEmails && (
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-3">
+                {userEmail ? (
+                  <div className="flex items-start gap-2 text-xs">
+                    <input 
+                      type="checkbox" 
+                      checked={recordEmailChecked}
+                      onChange={(e) => setRecordEmailChecked(e.target.checked)}
+                      id="record-email-check"
+                      className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <label htmlFor="record-email-check" className="text-slate-600 font-medium cursor-pointer">
+                      Record my email address (<span className="font-bold text-slate-800">{userEmail}</span>) with this submission.
+                    </label>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-1 select-none">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="email"
+                      value={manualEmail}
+                      onChange={(e) => {
+                         setManualEmail(e.target.value);
+                         if (validationErrors['_manual_email']) {
+                            setValidationErrors(prev => { const c = {...prev}; delete c['_manual_email']; return c; });
+                         }
+                      }}
+                      placeholder="Enter your email address"
+                      className={`w-full text-sm px-4 py-2.5 bg-white rounded-lg border focus:outline-none focus:ring-2 transition-all font-medium text-slate-800 ${
+                        validationErrors['_manual_email'] ? 'border-red-350 focus:ring-red-500 bg-red-50/20' : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
+                    />
+                    {validationErrors['_manual_email'] && (
+                      <span className="text-[11px] font-bold text-red-500 block animate-fadeIn pl-1 pt-1">{validationErrors['_manual_email']}</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             {submitStatus === 'error' && (
@@ -856,14 +953,14 @@ export default function FormSubmissionForm({
                       <RefreshCw size={16} className="animate-spin" />
                       Submitting...
                     </>
-                  ) : currentPage < pages.length - 1 ? (
-                    <>
-                       Next Section
-                    </>
-                  ) : (
+                  ) : targetActionDisplay === 'submit' ? (
                     <>
                       <Send size={15} />
                       Submit Form
+                    </>
+                  ) : (
+                    <>
+                       Next Section
                     </>
                   )}
                 </button>

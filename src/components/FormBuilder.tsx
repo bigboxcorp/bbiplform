@@ -223,6 +223,34 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                 </div>
 
                 <div className="pl-10 grid grid-cols-2 md:grid-cols-4 gap-2">
+                   {field.type === 'section_break' && (
+                      <div className="col-span-full flex flex-col gap-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100 mt-1">
+                         <label className="text-[10px] uppercase font-bold text-blue-800">After this section</label>
+                         <div className="flex items-center gap-2">
+                           <select 
+                              value={field.sectionEndAction || 'next'}
+                              onChange={(e) => updateField(field.id, { sectionEndAction: e.target.value as any })}
+                              className="border border-blue-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-500 bg-white shadow-sm w-48 text-slate-700 cursor-pointer"
+                           >
+                              <option value="next">Continue to next section</option>
+                              <option value="submit">Submit form</option>
+                              <option value="goto_section">Go to section...</option>
+                           </select>
+                           {field.sectionEndAction === 'goto_section' && (
+                              <select 
+                                 value={field.sectionEndTarget || ''}
+                                 onChange={(e) => updateField(field.id, { sectionEndTarget: e.target.value })}
+                                 className="border border-blue-200 rounded-md px-2 py-1.5 text-xs outline-none focus:border-blue-500 bg-white shadow-sm w-48 text-slate-700 cursor-pointer"
+                              >
+                                 <option value="">-- Select section --</option>
+                                 {config.fields.filter(f => f.type === 'section_break' && f.id !== field.id).map(sec => (
+                                    <option key={sec.id} value={sec.id}>{sec.label}</option>
+                                 ))}
+                              </select>
+                           )}
+                         </div>
+                      </div>
+                   )}
                    {(field.type === 'short_text' || field.type === 'long_text') && (
                       <>
                          <div className="flex flex-col gap-1">
@@ -278,9 +306,11 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Choices:</span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(field.options || []).map((option, oIdx) => (
-                        <div key={oIdx} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 pl-2.5 pr-1.5 py-0.5 rounded-full font-semibold text-slate-700 text-[11px] shadow-xs">
+                    <div className="flex flex-col gap-2 relative">
+                      {(field.options || []).map((option, oIdx) => {
+                         const jump = field.logicJumps?.find(j => j.value === option);
+                         return (
+                        <div key={oIdx} className="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-200 pl-2.5 pr-1.5 py-1.5 rounded-lg font-semibold text-slate-700 text-[11px] shadow-xs">
                           <span>{option}</span>
                           <button 
                             onClick={() => {
@@ -288,12 +318,55 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                               nextOptions.splice(oIdx, 1);
                               updateField(field.id, { options: nextOptions });
                             }}
-                            className="p-0.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-white cursor-pointer"
+                            className="p-0.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-white cursor-pointer mr-2"
                           >
                             ×
                           </button>
+                          
+                          {['select', 'radio'].includes(field.type) && (
+                            <div className="flex items-center gap-1 ml-auto border-l border-slate-200 pl-3">
+                               <span className="text-[9px] text-slate-400 font-bold uppercase">If selected:</span>
+                               <select
+                                  value={jump?.action || ''}
+                                  onChange={(e) => {
+                                     const newAction = e.target.value as any;
+                                     let jumps = [...(field.logicJumps || [])];
+                                     if (!newAction) {
+                                         jumps = jumps.filter(j => j.value !== option);
+                                     } else {
+                                         const existing = jumps.findIndex(j => j.value === option);
+                                         if (existing >= 0) jumps[existing].action = newAction;
+                                         else jumps.push({ value: option, action: newAction });
+                                     }
+                                     updateField(field.id, { logicJumps: jumps });
+                                  }}
+                                  className="border border-slate-200 rounded px-1.5 py-0.5 text-[10px] outline-none w-24 cursor-pointer focus:border-blue-400"
+                               >
+                                  <option value="">Continue</option>
+                                  <option value="goto_section">Go to section</option>
+                                  <option value="submit">Submit form</option>
+                               </select>
+                               {jump?.action === 'goto_section' && (
+                                  <select
+                                     value={jump.targetSectionId || ''}
+                                     onChange={(e) => {
+                                        let jumps = [...(field.logicJumps || [])];
+                                        const existing = jumps.findIndex(j => j.value === option);
+                                        if (existing >= 0) jumps[existing].targetSectionId = e.target.value;
+                                        updateField(field.id, { logicJumps: jumps });
+                                     }}
+                                     className="border border-slate-200 rounded px-1.5 py-0.5 text-[10px] outline-none w-28 cursor-pointer focus:border-blue-400"
+                                  >
+                                     <option value="">-- Choose --</option>
+                                     {config.fields.filter(f => f.type === 'section_break' && f.id !== field.id).map(sec => (
+                                        <option key={sec.id} value={sec.id}>{sec.label}</option>
+                                     ))}
+                                  </select>
+                               )}
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      )})}
                       <button
                         onClick={() => {
                           const val = prompt('Enter choice label:');

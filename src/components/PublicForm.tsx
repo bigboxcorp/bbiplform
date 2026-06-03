@@ -112,8 +112,7 @@ export default function PublicForm({ formId }: { formId: string }) {
   const [timeError, setTimeError] = useState<string | null>(null);
 
   const needsLogin = formData?.config?.settings?.requireMicrosoftLogin || 
-                     formData?.config?.settings?.allowMultipleSubmissions === false ||
-                     formData?.config?.settings?.collectEmails;
+                     formData?.config?.settings?.allowMultipleSubmissions === false;
 
   useEffect(() => {
      if (respondentTokens && !validProfileChecked) {
