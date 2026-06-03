@@ -186,6 +186,8 @@ export default function FormSubmissionForm({
        }
        // if section not found, fallback to next
        targetAction = 'next';
+    } else if (targetAction === 'goto_section' && !targetSectionId) {
+       targetAction = 'next';
     }
 
     if (targetAction === 'next' && currentPage < pages.length - 1) {

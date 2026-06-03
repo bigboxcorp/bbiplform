@@ -335,8 +335,11 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                                          jumps = jumps.filter(j => j.value !== option);
                                      } else {
                                          const existing = jumps.findIndex(j => j.value === option);
-                                         if (existing >= 0) jumps[existing].action = newAction;
-                                         else jumps.push({ value: option, action: newAction });
+                                         if (existing >= 0) {
+                                             jumps[existing] = { ...jumps[existing], action: newAction };
+                                         } else {
+                                             jumps.push({ value: option, action: newAction });
+                                         }
                                      }
                                      updateField(field.id, { logicJumps: jumps });
                                   }}
@@ -352,7 +355,9 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                                      onChange={(e) => {
                                         let jumps = [...(field.logicJumps || [])];
                                         const existing = jumps.findIndex(j => j.value === option);
-                                        if (existing >= 0) jumps[existing].targetSectionId = e.target.value;
+                                        if (existing >= 0) {
+                                            jumps[existing] = { ...jumps[existing], targetSectionId: e.target.value };
+                                        }
                                         updateField(field.id, { logicJumps: jumps });
                                      }}
                                      className="border border-slate-200 rounded px-1.5 py-0.5 text-[10px] outline-none w-28 cursor-pointer focus:border-blue-400"
