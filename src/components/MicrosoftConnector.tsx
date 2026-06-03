@@ -114,10 +114,11 @@ export default function MicrosoftConnector({
       const existingCols = await getTableColumns(driveId, selectedFileId, selectedTableName, tokens!, setTokens);
       const existingColNames = existingCols.map((c: any) => c.name.toLowerCase());
       
+      const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
       const requiredCols = [
         'Submission ID',
         'Submitted At',
-        ...formConfig.fields.map(f => f.label)
+        ...fieldsToSave.map(f => f.label)
       ];
 
       let addedCols = 0;
@@ -1243,12 +1244,10 @@ export default function MicrosoftConnector({
                   <span className="text-[9px] text-emerald-600 block leading-none font-bold uppercase">Excel Table Target</span>
                   <span className="font-bold">{saveConfig.tableName}</span>
                 </div>
-                {saveConfig.uploadFolderPath && (
-                   <div className="mt-1 col-span-2">
-                     <span className="text-[9px] text-emerald-600 block leading-none font-bold uppercase">Attachment Target Folder</span>
-                     <span className="font-bold">{saveConfig.uploadFolderPath}</span>
-                   </div>
-                )}
+                <div className="mt-1 col-span-2">
+                  <span className="text-[9px] text-emerald-600 block leading-none font-bold uppercase">Attachment Target Folder</span>
+                  <span className="font-bold">{saveConfig.uploadFolderPath || saveConfig.fileName?.replace(/\.xlsx?$/, '')}</span>
+                </div>
               </div>
             </div>
           )}

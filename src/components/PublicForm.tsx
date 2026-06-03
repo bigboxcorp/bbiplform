@@ -95,7 +95,8 @@ export default function PublicForm({ formId }: { formId: string }) {
         }
 
 
-        const storedAuth = localStorage.getItem('respondent_tokens');
+        let storedAuth = localStorage.getItem('respondent_tokens');
+        if (!storedAuth) storedAuth = localStorage.getItem('microsoft_tokens');
         if (storedAuth) {
            try { setRespondentTokens(JSON.parse(storedAuth)); } catch(e){}
         }
@@ -115,13 +116,13 @@ export default function PublicForm({ formId }: { formId: string }) {
                      formData?.config?.settings?.collectEmails;
 
   useEffect(() => {
-     if (needsLogin) {
-         if (respondentTokens && !validProfileChecked) {
-             getProfile(respondentTokens, setRespondentTokens).then(async (profile) => {
-                 const email = profile.userPrincipalName || profile.mail || '';
-                 (window as any).respondentEmail = email;
-                 setRespondentEmail(email);
-                 
+     if (respondentTokens && !validProfileChecked) {
+         getProfile(respondentTokens, setRespondentTokens).then(async (profile) => {
+             const email = profile.userPrincipalName || profile.mail || '';
+             (window as any).respondentEmail = email;
+             setRespondentEmail(email);
+             
+             if (needsLogin) {
                  // If disable multiple submissions, check if already submitted
                  if (formData.config.settings?.allowMultipleSubmissions === false) {
                      try {
@@ -142,17 +143,18 @@ export default function PublicForm({ formId }: { formId: string }) {
                          return;
                      }
                  }
-                 setValidProfileChecked(true);
-             }).catch(err => {
-                 console.error('Failed profile fetch, token valid?', err);
-                 setRespondentTokens(null);
-                 localStorage.removeItem('respondent_tokens');
-             });
-         }
-     } else {
+             }
+             setValidProfileChecked(true);
+         }).catch(err => {
+             console.error('Failed profile fetch, token valid?', err);
+             setRespondentTokens(null);
+             localStorage.removeItem('respondent_tokens');
+             if (!needsLogin) setValidProfileChecked(true);
+         });
+     } else if (!needsLogin) {
          setValidProfileChecked(true);
      }
-  }, [formData, respondentTokens, validProfileChecked]);
+  }, [formData, respondentTokens, validProfileChecked, formId, needsLogin]);
 
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTimer, setLockoutTimer] = useState(0);
