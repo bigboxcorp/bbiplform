@@ -34,7 +34,8 @@ import {
   XCircle,
   LogOut,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Settings2
 } from 'lucide-react';
 
 interface MicrosoftConnectorProps {
@@ -819,6 +820,16 @@ export default function MicrosoftConnector({
           <h2 className="font-bold text-slate-800 text-base">2. Connect Microsoft Teams</h2>
           <p className="text-xs text-slate-500 mt-0.5">Automated cloud storage inside shared Teams assets</p>
         </div>
+        {tokens && (
+          <button 
+            type="button"
+            onClick={handleSignout} 
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
+          >
+            <LogOut size={12} />
+            DISCONNECT
+          </button>
+        )}
       </div>
 
       {apiError && (

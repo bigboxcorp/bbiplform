@@ -91,6 +91,17 @@ export async function getJoinedTeams(tokens: MSTokens, setTokens: (t: MSTokens) 
   } catch (err) {
     console.warn("Failed to fetch joinedTeams.", err);
   }
+  
+  try {
+    // Fallback: fetch groups the user is a member of
+    const fallbackData = await fetchGraph("me/memberOf?$select=id,displayName", tokens, setTokens);
+    if (fallbackData && fallbackData.value) {
+      // Return only objects that look like groups
+      return fallbackData.value.filter((item: any) => item['@odata.type'] === '#microsoft.graph.group' || item.displayName);
+    }
+  } catch (err) {
+    console.error("Fallback to groups also failed", err);
+  }
   return [];
 }
 
