@@ -575,7 +575,7 @@ export default function FormSubmissionForm({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const cleanTitle = formConfig.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const cleanTitle = (formConfig.title || '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
     link.setAttribute('download', `${cleanTitle}_submissions.csv`);
     document.body.appendChild(link);
     link.click();

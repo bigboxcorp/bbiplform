@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
-    "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "dev": "cd bbiplform && tsx server.ts",
+    "build": "cd bbiplform && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "cd bbiplform && node dist/server.cjs",
+    "clean": "cd bbiplform && rm -rf dist server.js",
+    "lint": "cd bbiplform && tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
