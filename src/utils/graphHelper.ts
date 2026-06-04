@@ -178,7 +178,15 @@ export async function createFolderInChannel(
 ) {
   const encodedChannel = encodeURIComponent(channelName);
   const isSpecialRoot = channelName === 'Root Directory';
-  const endpoint = isSpecialRoot ? `drives/${driveId}/root/children` : `drives/${driveId}/root:/${encodedChannel}:/children`;
+  
+  let endpoint = '';
+  if (isSpecialRoot) {
+    endpoint = `drives/${driveId}/root/children`;
+  } else {
+    // First, resolve the folder ID for the channel
+    const channelFolder = await fetchGraph(`drives/${driveId}/root:/${encodedChannel}`, tokens, setTokens);
+    endpoint = `drives/${driveId}/items/${channelFolder.id}/children`;
+  }
   
   return await fetchGraph(endpoint, tokens, setTokens, {
     method: 'POST',
