@@ -261,7 +261,7 @@ export default function FormSubmissionForm({
                      let uploadedResult: any = null;
                      if (saveConfig) {
                        let driveId = saveConfig.driveId;
-                       if (!driveId && saveConfig.driveItemId.includes('!')) {
+                       if (!driveId && saveConfig.driveItemId && saveConfig.driveItemId.includes('!')) {
                          driveId = saveConfig.driveItemId.split('!')[0];
                        }
                        if (!driveId && saveConfig.groupId && tokens && setTokens) {
@@ -323,7 +323,7 @@ export default function FormSubmissionForm({
         }
         // PUBLIC SUBMISSION VIA GRAPH PROXY
         let driveId = saveConfig.driveId;
-        if (!driveId && saveConfig.driveItemId.includes('!')) {
+        if (!driveId && saveConfig.driveItemId && saveConfig.driveItemId.includes('!')) {
           driveId = saveConfig.driveItemId.split('!')[0];
         }
         const fileItemId = saveConfig.driveItemId;
@@ -394,7 +394,7 @@ export default function FormSubmissionForm({
         // AUTHENTICATED SANDBOX SUBMISSION
         let driveId = saveConfig.driveId;
         if (!driveId) {
-          if (saveConfig.driveItemId.includes('!')) {
+          if (saveConfig.driveItemId && saveConfig.driveItemId.includes('!')) {
             driveId = saveConfig.driveItemId.split('!')[0];
           } else if (saveConfig.groupId) {
              const driveInfo = await getTeamDrive(saveConfig.groupId, tokens, setTokens);
@@ -841,7 +841,7 @@ export default function FormSubmissionForm({
                         onChange={(e) => {
                           const files = Array.from(e.target.files || []);
                           if (field.fileOptions) {
-                              const validFiles = files.filter((f: File) => f.size <= field.fileOptions!.maxSizeMB * 1024 * 1024 && (field.fileOptions!.allowedTypes && field.fileOptions!.allowedTypes.length ? field.fileOptions!.allowedTypes.some(t => f.type.includes(t) || f.name.endsWith(t)) : true));
+                              const validFiles = files.filter((f: File) => f.size <= field.fileOptions!.maxSizeMB * 1024 * 1024 && (field.fileOptions!.allowedTypes && field.fileOptions!.allowedTypes.length ? field.fileOptions!.allowedTypes.some(t => (f.type || '').includes(t) || (f.name || '').endsWith(t)) : true));
                               if (validFiles.length !== files.length) {
                                   alert('Some files were rejected due to size or type restrictions.');
                               }

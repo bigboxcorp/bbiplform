@@ -370,8 +370,17 @@ export async function createExcelFileWithTable(
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // 2. Add headers in range A1 to column mapping (e.g. A1:E1 for 5 headers)
-  // Let's find end column letter: A, B, C, D, E, F ...
-  const endColLetter = String.fromCharCode(65 + headers.length - 1);
+  const getColLetter = (colIndex: number) => {
+    let letter = '';
+    let temp = colIndex;
+    while (temp > 0) {
+      let rem = (temp - 1) % 26;
+      letter = String.fromCharCode(65 + rem) + letter;
+      temp = Math.floor((temp - 1) / 26);
+    }
+    return letter;
+  };
+  const endColLetter = getColLetter(headers.length);
   const rangeAddress = `Sheet1!A1:${endColLetter}1`;
 
   const addHeaderEndpoint = `drives/${driveId}/items/${fileId}/workbook/worksheets('Sheet1')/range(address='${rangeAddress}')`;
