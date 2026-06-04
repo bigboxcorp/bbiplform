@@ -13,6 +13,7 @@ import {
   clearTableData,
   getTableColumns,
   createWorksheet,
+  getWorksheetUsedRange,
   createTableInWorksheet,
   getFoldersInChannel,
   createFolderInChannel
@@ -134,7 +135,7 @@ export default function MicrosoftConnector({
           await new Promise(resolve => setTimeout(resolve, 800));
         }
       }
-      alert(`Successfully added ${addedCols} missing columns.`);
+      alert(`Successfully added ${addedCols} column(s).`);
     } catch(err: any) {
       alert('Failed to add columns: ' + err.message);
     } finally {
@@ -173,6 +174,7 @@ export default function MicrosoftConnector({
             setSelectedTableName(saveConfig.tableName);
             setSelectedSheetName(saveConfig.sheetName);
             
+            if (!saveConfig.groupId) return;
             const driveInfo = await getTeamDrive(saveConfig.groupId, tokens, setTokens);
             setDriveId(driveInfo.id);
             const userChannels = await getTeamChannels(saveConfig.groupId, driveInfo.id, tokens, setTokens);
@@ -338,7 +340,7 @@ export default function MicrosoftConnector({
 
   const handleAutoSetup = async () => {
     if (!driveId || !selectedChannelName || !tokens) {
-      alert("Please select a Team and Channel first.");
+      alert('Select Team and Channel.');
       return;
     }
     const autoName = formConfig.title ? `${formConfig.title.replace(/[^a-zA-Z0-9 -]/g, '')}` : "Form Responses";
@@ -408,7 +410,7 @@ export default function MicrosoftConnector({
       });
       setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: true } });
 
-      alert(`✅ Auto Setup Complete! File "${autoName}" created and mapped automatically.`);
+      alert(`File "${autoName}" created & mapped.`);
     } catch(err: any) {
        setApiError(`Could not auto-setup Excel File: ${err.message}`);
     } finally {
@@ -495,7 +497,7 @@ export default function MicrosoftConnector({
       });
 
       setNewExcelFileName('');
-      alert(`File "${finalFileName}" created successfully! Tables and mapping auto-matched.`);
+      alert(`File "${finalFileName}" created & mapped.`);
     } catch (err: any) {
       setApiError(`Could not create new Excel File: ${err.message}`);
     } finally {
@@ -559,20 +561,34 @@ export default function MicrosoftConnector({
        const tName = newTableName.trim().replace(/[^a-zA-Z0-9]/g, '');
 
        let startAddress = 'A1';
-       if (tables.length > 0) {
-           // To leave 1 column gap, we assume each table is headers.length wide.
-           // Offset = total previous tables * (headers.length + 1 gap column)
-           const offsetCols = tables.length * (headers.length + 1); 
-           let colNum = offsetCols + 1; // 1-based index for columns
-
-           let newLetters = '';
-           let temp = colNum;
-           while (temp > 0) {
-               let rem = (temp - 1) % 26;
-               newLetters = String.fromCharCode(65 + rem) + newLetters;
-               temp = Math.floor((temp - 1) / 26);
+       
+       const usedRange = await getWorksheetUsedRange(driveId, selectedFileId, selectedSheetName, tokens, setTokens);
+       if (usedRange && usedRange.columnIndex !== undefined && usedRange.columnCount !== undefined) {
+           // Check if it's actually empty (A1 with empty value is often returned for blank sheets)
+           const isBlank = usedRange.address === `${selectedSheetName}!A1` && 
+             (!usedRange.values || !usedRange.values[0] || !usedRange.values[0][0] || usedRange.values[0][0] === '');
+           
+           if (!isBlank) {
+               // 3-column gap means if last is A (colIdx=0), gap is B(1),C(2),D(3), start at E(4).
+               // So newColIndex = usedRange.columnIndex + usedRange.columnCount + 3
+               const newColIndex0Based = usedRange.columnIndex + usedRange.columnCount + 2; 
+               // Wait, user says "3 column ka gap". 
+               // For example: Table 1 ends at A (index 0). We want gap B, C, D is 3 column gap.
+               // So table 2 starts at E (index 4).
+               // usedRange.columnIndex(0) + usedRange.columnCount(1) = 1 (this is B).
+               // B(1) + 3 = E(4).
+               // So: usedRange.columnIndex + usedRange.columnCount - 1 + 4 = columnIndex + columnCount + 3
+               const startColIndex0 = usedRange.columnIndex + usedRange.columnCount + 3;
+               
+               let newLetters = '';
+               let temp = startColIndex0 + 1; // 1-based index calculation
+               while (temp > 0) {
+                   let rem = (temp - 1) % 26;
+                   newLetters = String.fromCharCode(65 + rem) + newLetters;
+                   temp = Math.floor((temp - 1) / 26);
+               }
+               startAddress = `${newLetters}1`;
            }
-           startAddress = `${newLetters}1`;
        }
        
        const result = await createTableInWorksheet(driveId, selectedFileId, selectedSheetName, tName, headers, startAddress, tokens, setTokens);
@@ -581,7 +597,7 @@ export default function MicrosoftConnector({
        setSelectedTableName(result.name);
        setNewTableName('');
 
-       alert(`✅ Table "${result.name}" created at ${startAddress} with ${headers.length} columns!`);
+       alert(`Table "${result.name}" created.`);
     } catch(err: any) {
        setApiError(`Could not create Table: ${err.message}`);
     } finally {
@@ -592,12 +608,12 @@ export default function MicrosoftConnector({
   // 7. Manual Save/Map Selection settings
   const handleApplyLayoutSelections = async () => {
     if (!selectedTeamId || !selectedChannelId || !selectedFileId || !selectedTableName) {
-      alert('Please fill out all dropdown listings before saving config.');
+      alert('Complete all selections before saving.');
       return;
     }
 
     if (mappedTables[`${selectedFileId}_${selectedTableName}`] && mappedTables[`${selectedFileId}_${selectedTableName}`] !== formId) {
-      alert('Error: This table is already linked to another form. Please select a different table.');
+      alert('Table already linked. Select another.');
       return;
     }
 
@@ -614,7 +630,7 @@ export default function MicrosoftConnector({
        });
 
        if (mismatchedCols) {
-         const proceed = window.confirm('Warning: Column mappings do not match. Data saving may fail.\n\nPress "Cancel" and click "Add Missing Form Columns" to fix. Or try "Create Fresh Excel Document".\n\nProceed anyway?');
+         const proceed = window.confirm('Warning: Column mappings do not match. Data saving may fail.\nProceed anyway?');
          if (!proceed) {
              setIsModifyingTable(false);
              return;
@@ -695,7 +711,7 @@ export default function MicrosoftConnector({
       );
 
       if (!authWindow) {
-        alert('Prompt: Popup blocker active. Please allow popups for M365 Login.');
+        alert('Allow popups for M365 Login.');
         setAuthStatus('idle');
         return;
       }
@@ -1279,7 +1295,7 @@ export default function MicrosoftConnector({
                 </div>
                 <button
                   onClick={() => {
-                     if (window.confirm("Are you sure you want to unlock map syncing? This form will stop working and you will need to re-map it before it can receive responses again.")) {
+                     if (window.confirm("Unlock mapping? The form will stop receiving responses until re-mapped.")) {
                          setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: false } });
                      }
                   }}
@@ -1408,14 +1424,14 @@ export default function MicrosoftConnector({
                  <button 
                    onClick={async () => {
                      if (!formId) return;
-                     if (!confirm('Are you sure you want to reset the Submission ID counter? This will start the numbering back from the Start # you provide.')) return;
+                     if (!confirm('Reset Submission ID counter to Start #?')) return;
                      try {
                         const res = await fetch(`/api/forms/${formId}/reset-counter`, { method: 'POST' });
                         if (res.ok) {
-                           alert('Submission counter reset successfully!');
+                           alert('Counter reset.');
                         }
                      } catch(e) {
-                        alert('Could not reset sequence');
+                        alert('Reset failed.');
                      }
                    }}
                    className="text-[10px] bg-amber-50 text-amber-700 hover:bg-amber-100 px-2 py-1 rounded font-semibold border border-amber-200 transition-colors"

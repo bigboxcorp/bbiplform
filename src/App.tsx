@@ -103,7 +103,7 @@ export default function App() {
       
       const authWindow = window.open(url, 'microsoft_oauth_popup', 'width=600,height=700,status=no,resizable=yes');
       if (!authWindow) {
-        alert('Popup blocker active. Please allow popups for M365 Login.');
+        alert('Allow popups for M365 Login.');
         setIsLoggingIn(false);
         return;
       }
@@ -211,15 +211,15 @@ export default function App() {
 
   const handlePublish = async () => {
     if (!saveConfig) {
-      alert("Please map the form to an Excel spreadsheet in 'Microsoft 365 Integration' tab before publishing.");
+      alert("Map form to an Excel spreadsheet before publishing.");
       return;
     }
     if (formConfig.settings?.isMappingLocked === false) {
-      alert("Please Complete and Lock the Sync Mapping in 'Microsoft 365 Integration' tab before updating the form.");
+      alert("Complete and Lock Sync Mapping before updating.");
       return;
     }
     if (!tokens) {
-      alert("Please connect your Microsoft Account before publishing.");
+      alert("Connect Microsoft Account before publishing.");
       return;
     }
 
@@ -254,7 +254,7 @@ export default function App() {
       setPublishedUrl(pUrl);
       
       if (!isNew) {
-         alert('Live form updated successfully!');
+         alert('Form published.');
       }
     } catch (err: any) {
       alert(`Publish Error: ${err.message}`);
