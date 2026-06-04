@@ -99,6 +99,9 @@ export default function MicrosoftConnector({
   const [isCreatingExcel, setIsCreatingExcel] = useState(false);
   const [isModifyingTable, setIsModifyingTable] = useState(false);
   
+  // Track tables linked to forms
+  const [mappedTables, setMappedTables] = useState<Record<string, string>>({});
+  
   const [attachmentFolders, setAttachmentFolders] = useState<any[]>([]);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -142,7 +145,19 @@ export default function MicrosoftConnector({
   // 1. Fetch system credentials status on startup
   useEffect(() => {
     fetchConfig();
+    fetchMappedTables();
   }, []);
+
+  const fetchMappedTables = async () => {
+    try {
+      const res = await fetch('/api/mapped-tables');
+      if (res.ok) {
+         setMappedTables(await res.json());
+      }
+    } catch(err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     const restoreSetup = async () => {
@@ -480,7 +495,7 @@ export default function MicrosoftConnector({
       });
 
       setNewExcelFileName('');
-      alert(`Excel folder me file "${finalFileName}" successfully create ho gayi h! Tables aur mapping automatic match ho gayi hai.`);
+      alert(`File "${finalFileName}" created successfully! Tables and mapping auto-matched.`);
     } catch (err: any) {
       setApiError(`Could not create new Excel File: ${err.message}`);
     } finally {
@@ -594,7 +609,7 @@ export default function MicrosoftConnector({
        });
 
        if (mismatchedCols) {
-         const proceed = window.confirm('Warning: Is table me column mapping properly form se match nahi kar rahi hai. Data save hone me error aa sakta hai.\n\n"Cancel" press karein and "Add Missing Form Columns" pe click karein existing table modify karne ke liye. Ya phir "Create Fresh Excel Document" try karein.\n\nFir bhi proceed karna chahte hain?');
+         const proceed = window.confirm('Warning: Column mappings do not match. Data saving may fail.\n\nPress "Cancel" and click "Add Missing Form Columns" to fix. Or try "Create Fresh Excel Document".\n\nProceed anyway?');
          if (!proceed) {
              setIsModifyingTable(false);
              return;
@@ -1191,9 +1206,14 @@ export default function MicrosoftConnector({
                         >
                           <option value="">Select Table Object</option>
                           {tables.map(table => (
-                            <option key={table.id} value={table.name}>{table.name} ({table.displayName})</option>
+                            <option key={table.id} value={table.name}>{table.name} {mappedTables[`${selectedFileId}_${table.name}`] && mappedTables[`${selectedFileId}_${table.name}`] !== formId ? '(Already Linked)' : ''}</option>
                           ))}
                         </select>
+                        {selectedTableName && mappedTables[`${selectedFileId}_${selectedTableName}`] && mappedTables[`${selectedFileId}_${selectedTableName}`] !== formId && (
+                           <div className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded border border-amber-200 mb-2">
+                             ⚠️ Warning: This table is already linked to another form. Choosing it again may cause mapping conflicts.
+                           </div>
+                        )}
                         {selectedSheetName && (
                           <form onSubmit={handleCreateNewTable} className="flex gap-2 border-t border-slate-200 pt-2">
                              <input 

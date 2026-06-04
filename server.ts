@@ -335,6 +335,24 @@ async function startServer() {
   // ======================================
   // Forms API (SQLite Powered)
   // ======================================
+  app.get('/api/mapped-tables', (req, res) => {
+    try {
+      const rows = db.prepare(`SELECT id, excelConfig FROM forms`).all() as any[];
+      const mappedTables: Record<string, string> = {}; // composite_key -> formId
+      for (const row of rows) {
+         try {
+            const excelConfig = JSON.parse(row.excelConfig);
+            if (excelConfig && excelConfig.driveItemId && excelConfig.tableName) {
+               mappedTables[`${excelConfig.driveItemId}_${excelConfig.tableName}`] = row.id;
+            }
+         } catch(e) {}
+      }
+      res.json(mappedTables);
+    } catch(err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get('/api/forms', (req, res) => {
     try {
       const email = req.query.email as string;
@@ -382,6 +400,34 @@ async function startServer() {
     }
   });
 
+  app.post('/api/forms/:id/duplicate', (req, res) => {
+    try {
+      const formId = req.params.id;
+      const { creatorEmail } = req.body;
+      const row = db.prepare(`SELECT * FROM forms WHERE id = ?`).get(formId) as any;
+      
+      if (!row) return res.status(404).json({ error: 'Form not found' });
+      
+      const newId = uuidv4();
+      let config = JSON.parse(row.config);
+      
+      // Clear mapping from duplicated form
+      config.settings = { ...(config.settings || {}), isMappingLocked: false };
+      
+      const insert = db.prepare(`INSERT INTO forms (id, config, excelConfig, creatorTokens, creatorEmail) VALUES (?, ?, ?, ?, ?)`);
+      insert.run(
+        newId, 
+        JSON.stringify(config), 
+        JSON.stringify({}), // Clear excel config
+        row.creatorTokens, // Keep tokens if we want? Or maybe clear it? It's fine to keep them if it's the same user.
+        creatorEmail || row.creatorEmail || null
+      );
+      
+      res.json({ success: true, newId });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   app.put('/api/forms/:id', (req, res) => {
     try {
       const formId = req.params.id;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2 } from 'lucide-react';
+import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2, Copy } from 'lucide-react';
 import { FormConfig, ExcelSaveConfig } from '../types';
 
 interface SavedForm {
@@ -29,9 +29,32 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
       });
   };
 
+  const handleDuplicateForm = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm('Duplicate this form?')) {
+      fetch(`/api/forms/${id}/duplicate`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorEmail: userEmail })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+           // Reload forms
+           fetch(`/api/forms?email=${encodeURIComponent(userEmail || '')}`)
+             .then(res => res.json())
+             .then(data => setForms(data));
+        } else {
+           alert('Failed to duplicate form');
+        }
+      })
+      .catch(err => alert('Error duplicating form'));
+    }
+  };
+
   const handleDeleteForm = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
+    if (window.confirm('Delete this form?')) {
       fetch(`/api/forms/${id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(data => {
@@ -113,15 +136,22 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
               
               <div className="border-t border-slate-100 p-3 bg-slate-50 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Edit Form</span>
-                 <div className="flex gap-2">
-                   <button 
-                     onClick={e => handleDeleteForm(e, form.id)}
-                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
-                     title="Delete Form"
-                   >
-                     <Trash2 size={14} />
-                   </button>
-                   <a 
+                   <div className="flex gap-2">
+                     <button 
+                       onClick={e => handleDuplicateForm(e, form.id)}
+                       className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
+                       title="Duplicate Form"
+                     >
+                       <Copy size={14} />
+                     </button>
+                     <button 
+                       onClick={e => handleDeleteForm(e, form.id)}
+                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
+                       title="Delete Form"
+                     >
+                       <Trash2 size={14} />
+                     </button>
+                     <a 
                      href={`${safeOrigin}/form/${form.id}`} 
                      target="_blank" 
                      rel="noopener noreferrer" 
