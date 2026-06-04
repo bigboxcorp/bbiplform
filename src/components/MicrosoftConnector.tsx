@@ -181,6 +181,9 @@ export default function MicrosoftConnector({
             const files = await getExcelFilesInChannel(driveInfo.id, saveConfig.channelName, tokens, setTokens);
             setExcelFiles(files);
             
+            const foldersList = await getFoldersInChannel(driveInfo.id, saveConfig.channelName, tokens, setTokens);
+            setAttachmentFolders(foldersList);
+            
             const sheetsList = await getWorkbookWorksheets(driveInfo.id, (saveConfig as any).fileId || saveConfig.driveItemId, tokens, setTokens);
             setWorksheets(sheetsList);
             const tablesList = await getWorkbookTables(driveInfo.id, (saveConfig as any).fileId || saveConfig.driveItemId, tokens, setTokens);

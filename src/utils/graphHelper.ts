@@ -182,6 +182,7 @@ export async function createFolderInChannel(
   
   return await fetchGraph(endpoint, tokens, setTokens, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: folderName,
       folder: { },

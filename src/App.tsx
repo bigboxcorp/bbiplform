@@ -24,14 +24,16 @@ export default function App() {
   const path = window.location.pathname;
 
   // ROUTER: Route to Public Form
-  if (path.startsWith('/form/')) {
-    const formId = path.split('/')[2];
+  const pathMatchForm = path.match(/^\/form\/([^\/]+)/i);
+  if (pathMatchForm) {
+    const formId = pathMatchForm[1];
     return <PublicForm formId={formId} />;
   }
 
   // ROUTER: Route to View Responses
-  if (path.startsWith('/responses/')) {
-    const formId = path.split('/')[2];
+  const pathMatchResponses = path.match(/^\/responses\/([^\/]+)/i);
+  if (pathMatchResponses) {
+    const formId = pathMatchResponses[1];
     return <ResponsesViewer formId={formId} />;
   }
 
@@ -103,7 +105,7 @@ export default function App() {
       
       const authWindow = window.open(url, 'microsoft_oauth_popup', 'width=600,height=700,status=no,resizable=yes');
       if (!authWindow) {
-        alert('Allow popups for M365 Login.');
+        alert('Popup blocker active. Please allow popups for M365 Login.');
         setIsLoggingIn(false);
         return;
       }
@@ -211,15 +213,15 @@ export default function App() {
 
   const handlePublish = async () => {
     if (!saveConfig) {
-      alert("Map form to an Excel spreadsheet before publishing.");
+      alert("Please map the form to an Excel spreadsheet in 'Microsoft 365 Integration' tab before publishing.");
       return;
     }
     if (formConfig.settings?.isMappingLocked === false) {
-      alert("Complete and Lock Sync Mapping before updating.");
+      alert("Please Complete and Lock the Sync Mapping in 'Microsoft 365 Integration' tab before updating the form.");
       return;
     }
     if (!tokens) {
-      alert("Connect Microsoft Account before publishing.");
+      alert("Please connect your Microsoft Account before publishing.");
       return;
     }
 
@@ -254,7 +256,7 @@ export default function App() {
       setPublishedUrl(pUrl);
       
       if (!isNew) {
-         alert('Form published.');
+         alert('Live form updated successfully!');
       }
     } catch (err: any) {
       alert(`Publish Error: ${err.message}`);
@@ -458,7 +460,7 @@ export default function App() {
                       <p>• Tab: {saveConfig.sheetName}</p>
                       <p>• Obj: {saveConfig.tableName}</p>
                       <p>• File: {saveConfig.fileName}</p>
-                      <p>• Attachments Folder: {saveConfig.uploadFolderPath || saveConfig.fileName?.replace(/\.xlsx?$/, '')}</p>
+                      <p>• Attachments Folder: {saveConfig.uploadFolderPath || saveConfig.fileName.replace(/\.xlsx?$/, '')}</p>
                     </div>
                   </div>
                 ) : (
