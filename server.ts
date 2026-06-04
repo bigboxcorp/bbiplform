@@ -386,7 +386,7 @@ async function startServer() {
       const forms = rows.map(r => ({
         id: r.id,
         config: JSON.parse(r.config),
-        excelConfig: JSON.parse(r.excelConfig),
+        excelConfig: (r.excelConfig && r.excelConfig !== "{}" && r.excelConfig !== "null") ? JSON.parse(r.excelConfig) : null,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt
       }));
@@ -439,7 +439,7 @@ async function startServer() {
       insert.run(
         newId, 
         JSON.stringify(config), 
-        JSON.stringify({}), // Clear excel config
+        JSON.stringify(null), // Clear excel config
         row.creatorTokens, // Keep tokens if we want? Or maybe clear it? It's fine to keep them if it's the same user.
         creatorEmail || row.creatorEmail || null
       );
@@ -500,7 +500,7 @@ async function startServer() {
       res.json({
         id: row.id,
         config: JSON.parse(row.config),
-        excelConfig: JSON.parse(row.excelConfig) // Need this for mapping, maybe? Wait no, maybe client needs some info, but omit creatorTokens!
+        excelConfig: (row.excelConfig && row.excelConfig !== "{}" && row.excelConfig !== "null") ? JSON.parse(row.excelConfig) : null
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
