@@ -112,7 +112,7 @@ export default function PublicForm({ formId }: { formId: string }) {
         // Set up interval to recheck every minute
         intervalId = setInterval(() => {
             checkTimeConstraints(data);
-        }, 10000); // Check every 10 seconds for better responsiveness
+        }, 5000); // Check every 5 seconds for better responsiveness
 
         let storedAuth = localStorage.getItem('respondent_tokens');
         if (!storedAuth) storedAuth = localStorage.getItem('microsoft_tokens');
