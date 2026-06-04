@@ -21,12 +21,6 @@ export default function PublicForm({ formId }: { formId: string }) {
         return res.json();
       })
       .then(data => {
-        if (!data.config?.settings?.isMappingLocked) {
-           setError('Form under maintenance. Please try again later.');
-           setLoading(false);
-           return;
-        }
-
         // Check local storage for multiple submissions rule before continuing
         if (data.config?.settings?.allowMultipleSubmissions === false) {
             if (localStorage.getItem(`__form_submitted_${data.id}`)) {

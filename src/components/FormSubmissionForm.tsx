@@ -95,6 +95,7 @@ export default function FormSubmissionForm({
   if (curr.length > 0) pages.push(curr);
 
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageHistory, setPageHistory] = useState<number[]>([]);
 
   const fieldsToRender = pages.length > 0 ? pages[currentPage] : [];
 
@@ -181,6 +182,7 @@ export default function FormSubmissionForm({
        if (targetSectionId) {
            const sectionIndex = pages.findIndex(p => p[0]?.id === targetSectionId);
            if (sectionIndex !== -1) {
+              setPageHistory(prev => [...prev, currentPage]);
               setCurrentPage(sectionIndex);
               window.scrollTo({ top: 0, behavior: 'smooth' });
               return;
@@ -192,6 +194,7 @@ export default function FormSubmissionForm({
 
     if (targetAction === 'next') {
        if (currentPage < pages.length - 1) {
+          setPageHistory(prev => [...prev, currentPage]);
           setCurrentPage(currentPage + 1);
           window.scrollTo({ top: 0, behavior: 'smooth' });
           return;
@@ -937,12 +940,17 @@ export default function FormSubmissionForm({
 
             {formConfig.fields.length > 0 && (
               <div className="pt-6 flex gap-3">
-                {currentPage > 0 && (
+                {pageHistory.length > 0 && (
                    <button
                      type="button"
                      onClick={() => {
-                        setCurrentPage(p => p - 1);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        const newHistory = [...pageHistory];
+                        const prevPage = newHistory.pop();
+                        if (prevPage !== undefined) {
+                           setPageHistory(newHistory);
+                           setCurrentPage(prevPage);
+                           window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
                      }}
                      className="px-6 py-3 bg-white text-slate-700 font-bold border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-all cursor-pointer"
                    >
