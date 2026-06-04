@@ -109,6 +109,35 @@ export default function FormSubmissionForm({
       return;
     }
 
+    if (publicMode) {
+        const ranges = formConfig.settings?.dailyTimeRanges;
+        if (ranges && ranges.length > 0) {
+            const hasValidRanges = ranges.some((r: any) => r.start && r.end);
+            if (hasValidRanges) {
+                const now = new Date();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                let isAllowed = false;
+                for (const r of ranges) {
+                    if (r.start && r.end) {
+                        const [sH, sM] = r.start.split(':').map(Number);
+                        const [eH, eM] = r.end.split(':').map(Number);
+                        const startMinutes = sH * 60 + sM;
+                        const endMinutes = eH * 60 + eM;
+                        if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+                            isAllowed = true;
+                            break;
+                        }
+                    }
+                }
+                if (!isAllowed) {
+                    setSubmitStatus('error');
+                    setErrorMessage('This form is currently closed and only accepts submissions during specific times of the day.');
+                    return;
+                }
+            }
+        }
+    }
+
     // Client-Side Validation for Current Page ONLY
     const errors: Record<string, string> = {};
     if (currentPage === 0 && formConfig.settings?.collectEmails && !userEmail && recordEmailChecked) {
@@ -116,6 +145,15 @@ export default function FormSubmissionForm({
         errors['_manual_email'] = 'Email address is required.';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manualEmail)) {
         errors['_manual_email'] = 'Valid email address is required.';
+      } else if (formConfig.settings.allowedDomains) {
+          const allowedStr = formConfig.settings.allowedDomains;
+          if (allowedStr.trim()) {
+              const allowedDomains = allowedStr.split(',').map((s: string) => s.trim().toLowerCase());
+              const domain = manualEmail.trim().split('@')[1]?.toLowerCase();
+              if (domain && !allowedDomains.includes(domain)) {
+                  errors['_manual_email'] = `Only email addresses from these domains are allowed: ${allowedDomains.join(', ')}`;
+              }
+          }
       }
     }
     fieldsToRender.forEach(field => {
@@ -649,8 +687,13 @@ export default function FormSubmissionForm({
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-1 select-none">
-                      Email Address <span className="text-red-500">*</span>
+                    <label className="text-sm font-semibold text-slate-700 flex flex-col gap-0.5 select-none">
+                      <span>Email Address <span className="text-red-500">*</span></span>
+                      {formConfig.settings?.allowedDomains && formConfig.settings.allowedDomains.trim() && (
+                          <span className="text-xs text-slate-500 font-normal">
+                             Accepted domains: {formConfig.settings.allowedDomains.split(',').map(d => d.trim()).join(', ')}
+                          </span>
+                      )}
                     </label>
                     <input 
                       type="email"
