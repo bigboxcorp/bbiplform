@@ -24,16 +24,14 @@ export default function App() {
   const path = window.location.pathname;
 
   // ROUTER: Route to Public Form
-  const pathMatchForm = path.match(/^\/form\/([^\/]+)/i);
-  if (pathMatchForm) {
-    const formId = pathMatchForm[1];
+  if (path.includes('/form/')) {
+    const formId = path.split('/form/')[1].split('/')[0];
     return <PublicForm formId={formId} />;
   }
 
   // ROUTER: Route to View Responses
-  const pathMatchResponses = path.match(/^\/responses\/([^\/]+)/i);
-  if (pathMatchResponses) {
-    const formId = pathMatchResponses[1];
+  if (path.includes('/responses/')) {
+    const formId = path.split('/responses/')[1].split('/')[0];
     return <ResponsesViewer formId={formId} />;
   }
 

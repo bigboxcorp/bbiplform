@@ -294,7 +294,13 @@ async function startServer() {
     };
 
     if (req.headers['content-type']) {
-      headers['Content-Type'] = req.headers['content-type'] as string;
+      // Strip out charset for Microsoft Graph compatibility
+      const cType = req.headers['content-type'] as string;
+      if (cType.includes('application/json')) {
+        headers['Content-Type'] = 'application/json';
+      } else {
+        headers['Content-Type'] = cType;
+      }
     }
 
     try {
@@ -304,7 +310,10 @@ async function startServer() {
       };
 
       if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
-        fetchOptions.body = JSON.stringify(req.body);
+        if (Object.keys(req.body).length > 0 || req.headers['content-type']?.includes('json')) {
+           fetchOptions.body = JSON.stringify(req.body);
+           headers['Content-Type'] = 'application/json';
+        }
       }
 
       const graphRes = await fetch(graphUrl, fetchOptions);
@@ -697,7 +706,9 @@ async function startServer() {
         };
 
         if (req.headers['content-type']) {
-          (fetchOptions.headers as Record<string, string>)['Content-Type'] = req.headers['content-type'] as string;
+          let cType = req.headers['content-type'] as string;
+          if (cType.includes('application/json')) cType = 'application/json';
+          (fetchOptions.headers as Record<string, string>)['Content-Type'] = cType;
         }
 
         if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
@@ -706,6 +717,9 @@ async function startServer() {
             (fetchOptions.headers as Record<string, string>)['Content-Type'] = req.body.contentType || 'application/octet-stream';
           } else {
             fetchOptions.body = JSON.stringify(req.body);
+            if (!(fetchOptions.headers as Record<string, string>)['Content-Type']) {
+               (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
+            }
           }
         }
         return fetch(graphUrl, fetchOptions);
