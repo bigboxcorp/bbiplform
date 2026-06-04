@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FormConfig, ExcelSaveConfig, MSTokens, FormSubmission } from '../types';
 import { fetchGraph, getTableColumns, addRowToTable, getTeamDrive, fetchPublicGraph, uploadFilePublic, uploadFileSystem, getProfile } from '../utils/graphHelper';
 import { 
+  Star,
   Send, 
   ArrowRight, 
   CheckCircle, 
@@ -762,17 +763,19 @@ export default function FormSubmissionForm({
                     {/* RATING / LINEAR SCALE */}
                     {field.type === 'rating' && (
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {[1, 2, 3, 4, 5].map((val) => (
+                        {Array.from({ length: typeof field.maxValue === 'number' ? field.maxValue : 5 }, (_, i) => i + 1).map((val) => (
                            <label key={val} className="flex flex-col items-center gap-1 cursor-pointer">
                               <span className="text-[10px] text-slate-400 font-bold">{val}</span>
-                              <input
-                                 type="radio"
-                                 name={field.id}
-                                 value={val}
-                                 checked={String(formData[field.id]) === String(val)}
-                                 onChange={(e) => handleInputChange(field.id, e.target.value)}
-                                 className="w-5 h-5 text-blue-600 border-slate-300 focus:ring-blue-500 form-radio cursor-pointer"
-                              />
+                              <button
+                                 type="button"
+                                 onClick={() => handleInputChange(field.id, String(val))}
+                                 className="outline-none"
+                              >
+                                 <Star 
+                                   size={24} 
+                                   className={`transition-colors ${String(formData[field.id]) && Number(formData[field.id]) >= val ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-300 hover:text-amber-200 hover:fill-amber-100'}`} 
+                                 />
+                              </button>
                            </label>
                         ))}
                       </div>

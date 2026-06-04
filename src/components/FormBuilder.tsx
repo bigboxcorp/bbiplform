@@ -267,6 +267,12 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                          </div>
                       </>
                    )}
+                   {field.type === 'rating' && (
+                      <div className="flex flex-col gap-1">
+                         <label className="text-[10px] text-slate-500 font-medium font-mono uppercase">Max Rating (Stars)</label>
+                         <input type="number" value={field.maxValue || 5} onChange={(e) => updateField(field.id, { maxValue: e.target.value ? parseInt(e.target.value) : undefined })} className="border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-blue-400" placeholder="e.g. 5" min="1" max="20" />
+                      </div>
+                   )}
                    {field.type === 'number' && (
                       <>
                          <div className="flex flex-col gap-1">
