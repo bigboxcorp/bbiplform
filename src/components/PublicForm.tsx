@@ -13,6 +13,9 @@ export default function PublicForm({ formId }: { formId: string }) {
   const [authError, setAuthError] = useState<string | null>(null);
   const [validProfileChecked, setValidProfileChecked] = useState(false);
   const [respondentEmail, setRespondentEmail] = useState<string>('');
+  
+  const [hasAlreadySubmitted, setHasAlreadySubmitted] = useState<boolean>(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/forms/${formId}`)
@@ -106,10 +109,6 @@ export default function PublicForm({ formId }: { formId: string }) {
         setLoading(false);
       });
   }, [formId]);
-
-  const [hasAlreadySubmitted, setHasAlreadySubmitted] = useState<boolean>(false);
-
-  const [timeError, setTimeError] = useState<string | null>(null);
 
   const needsLogin = formData?.config?.settings?.requireMicrosoftLogin || 
                      formData?.config?.settings?.allowMultipleSubmissions === false;
