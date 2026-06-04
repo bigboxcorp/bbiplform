@@ -444,6 +444,7 @@ export default function App() {
                    </a>
                 </div>
 
+                {saveConfig ? (
                 <div className="bg-blue-50/50 rounded-lg border border-blue-100 p-3 mt-4 text-xs">
                   <h4 className="text-[10px] uppercase font-bold text-blue-600 mb-2 flex items-center gap-1.5">
                     <FileText size={12} /> Monitor Responses
@@ -458,6 +459,14 @@ export default function App() {
                     </a>
                   </div>
                 </div>
+                ) : (
+                <div className="bg-slate-50 rounded-lg border border-slate-100 p-3 mt-4 text-xs">
+                  <h4 className="text-[10px] uppercase font-bold text-slate-500 mb-2 flex items-center gap-1.5">
+                    <FileText size={12} /> Responses Unlinked
+                  </h4>
+                  <p className="text-slate-500 text-[11px]">Connect this form to an Excel sheet to view responses.</p>
+                </div>
+                )}
              </div>
            )}
 

@@ -15,7 +15,10 @@ import {
   createWorksheet,
   createTableInWorksheet,
   getFoldersInChannel,
-  createFolderInChannel
+  createFolderInChannel,
+  getWorksheetUsedRange,
+  indexToColumn,
+  columnToIndex
 } from '../utils/graphHelper';
 import { 
   Lock, 
@@ -562,20 +565,33 @@ export default function MicrosoftConnector({
        const tName = newTableName.trim().replace(/[^a-zA-Z0-9]/g, '');
 
        let startAddress = 'A1';
-       if (tables.length > 0) {
-           // To leave 1 column gap, we assume each table is headers.length wide.
-           // Offset = total previous tables * (headers.length + 1 gap column)
-           const offsetCols = tables.length * (headers.length + 1); 
-           let colNum = offsetCols + 1; // 1-based index for columns
-
-           let newLetters = '';
-           let temp = colNum;
-           while (temp > 0) {
-               let rem = (temp - 1) % 26;
-               newLetters = String.fromCharCode(65 + rem) + newLetters;
-               temp = Math.floor((temp - 1) / 26);
+       try {
+           const usedRange = await getWorksheetUsedRange(driveId, selectedFileId, selectedSheetName, tokens, setTokens);
+           if (usedRange && usedRange.address) {
+               // Address looks like "Sheet1!A1:Z10"
+               const rangeParts = usedRange.address.split('!');
+               const rangeStr = rangeParts.length > 1 ? rangeParts[1] : rangeParts[0];
+               const match = rangeStr.match(/:([A-Za-z]+)\d+/);
+               if (match) {
+                   const endColStr = match[1];
+                   const endColIdx = columnToIndex(endColStr);
+                   const startColIdx = endColIdx + 4; // 3 columns gap (endColIdx + 1, +2, +3 are gap, so +4 is start) 
+                   const startColLetter = indexToColumn(startColIdx);
+                   startAddress = `${startColLetter}1`;
+               } else {
+                   // Only a single cell used like "Sheet1!A1"
+                   const matchSingle = rangeStr.match(/([A-Za-z]+)\d+/);
+                   if (matchSingle) {
+                       const endColStr = matchSingle[1];
+                       const endColIdx = columnToIndex(endColStr);
+                       const startColIdx = endColIdx + 4;
+                       const startColLetter = indexToColumn(startColIdx);
+                       startAddress = `${startColLetter}1`;
+                   }
+               }
            }
-           startAddress = `${newLetters}1`;
+       } catch (err) {
+           console.warn('Could not query used range, falling back to A1', err);
        }
        
        const result = await createTableInWorksheet(driveId, selectedFileId, selectedSheetName, tName, headers, startAddress, tokens, setTokens);

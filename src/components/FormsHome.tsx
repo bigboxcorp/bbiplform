@@ -151,18 +151,28 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
                      >
                        <Trash2 size={14} />
                      </button>
+                     {form.excelConfig ? (
                      <a 
-                     href={`${safeOrigin}/responses/${form.id}`} 
-                     target="_blank" 
-                     rel="noopener noreferrer" 
-                     onClick={e => e.stopPropagation()} 
-                     className="p-1.5 text-slate-400 hover:text-indigo-600 bg-white rounded shadow-xs hover:shadow-sm"
-                     title="View Responses"
-                   >
-                     <Users size={14} />
-                   </a>
-                   <a 
-                     href={`${safeOrigin}/form/${form.id}`} 
+                       href={`${safeOrigin}/responses/${form.id}`} 
+                       target="_blank" 
+                       rel="noopener noreferrer" 
+                       onClick={e => e.stopPropagation()} 
+                       className="p-1.5 text-slate-400 hover:text-indigo-600 bg-white rounded shadow-xs hover:shadow-sm"
+                       title="View Responses"
+                     >
+                       <Users size={14} />
+                     </a>
+                     ) : (
+                     <span 
+                       className="p-1.5 text-slate-300 bg-white rounded shadow-xs cursor-not-allowed"
+                       title="Responses list unavailable (Form is not linked to Excel)"
+                       onClick={e => e.stopPropagation()}
+                     >
+                       <Users size={14} className="opacity-50" />
+                     </span>
+                     )}
+                     <a 
+                       href={`${safeOrigin}/form/${form.id}`} 
                      target="_blank" 
                      rel="noopener noreferrer" 
                      onClick={e => e.stopPropagation()} 
