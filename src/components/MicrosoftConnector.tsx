@@ -1319,11 +1319,11 @@ export default function MicrosoftConnector({
                    <div className="bg-white border border-blue-100 rounded-lg p-3 my-2 text-xs flex justify-between items-center">
                       <div>
                           <span className="text-[10px] uppercase font-bold text-blue-500 block">Monitor Responses (Admin Link)</span>
-                          <a href={publishedUrl.replace('/form/', '/responses/')} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium hover:underline flex items-center gap-1 mt-0.5">
-                             {publishedUrl.replace('/form/', '/responses/')} <ExternalLink size={12} />
+                          <a href={publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium hover:underline flex items-center gap-1 mt-0.5">
+                             {publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')} <ExternalLink size={12} />
                           </a>
                       </div>
-                      <button onClick={() => { navigator.clipboard.writeText(publishedUrl.replace('/form/', '/responses/')); alert('Link Copied!'); }} className="text-[10px] font-bold border border-slate-200 rounded px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center gap-1 cursor-pointer">
+                      <button onClick={() => { navigator.clipboard.writeText(publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')); alert('Link Copied!'); }} className="text-[10px] font-bold border border-slate-200 rounded px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center gap-1 cursor-pointer">
                           <Copy size={12} /> Copy
                       </button>
                    </div>
