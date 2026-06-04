@@ -449,11 +449,11 @@ export default function App() {
                     <FileText size={12} /> Monitor Responses
                   </h4>
                   <div className="flex bg-white border border-blue-200 rounded-md overflow-hidden shadow-xs">
-                    <input type="text" readOnly value={publishedUrl.replace('/f/', '/r/')} className="w-full text-[11px] text-slate-700 pl-2 py-1.5 bg-transparent focus:outline-none" />
-                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl.replace('/f/', '/r/')); alert('Link copied!'); }} className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Copy">
+                    <input type="text" readOnly value={publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')} className="w-full text-[11px] text-slate-700 pl-2 py-1.5 bg-transparent focus:outline-none" />
+                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')); alert('Link copied!'); }} className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Copy">
                       <Copy size={12} />
                     </button>
-                    <a href={publishedUrl.replace('/f/', '/r/')} target="_blank" rel="noopener noreferrer" className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Open Link">
+                    <a href={publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')} target="_blank" rel="noopener noreferrer" className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Open Link">
                       <ExternalLink size={12} />
                     </a>
                   </div>

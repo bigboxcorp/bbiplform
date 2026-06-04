@@ -144,6 +144,11 @@ export default function FormSubmissionForm({
                 errors[field.id] = `Please answer all rows.`;
             }
         }
+        if (field.type === 'file' && field.fileOptions && Array.isArray(val)) {
+            if (val.length > field.fileOptions.maxAllowed) {
+                errors[field.id] = `Maximum ${field.fileOptions.maxAllowed} file(s) allowed. You selected ${val.length}.`;
+            }
+        }
       }
     });
 
@@ -841,11 +846,20 @@ export default function FormSubmissionForm({
                         onChange={(e) => {
                           const files = Array.from(e.target.files || []);
                           if (field.fileOptions) {
+                              if (files.length > field.fileOptions.maxAllowed) {
+                                  alert(`Maximum ${field.fileOptions.maxAllowed} file(s) allowed. You selected ${files.length}.`);
+                                  e.target.value = '';
+                                  handleInputChange(field.id, []);
+                                  return;
+                              }
                               const validFiles = files.filter((f: File) => f.size <= field.fileOptions!.maxSizeMB * 1024 * 1024 && (field.fileOptions!.allowedTypes && field.fileOptions!.allowedTypes.length ? field.fileOptions!.allowedTypes.some(t => f.type.includes(t) || f.name.endsWith(t)) : true));
                               if (validFiles.length !== files.length) {
-                                  alert('Some files were rejected due to size or type restrictions.');
+                                  alert('Some files were rejected due to size or type restrictions. Please select valid files.');
+                                  e.target.value = '';
+                                  handleInputChange(field.id, []);
+                                  return;
                               }
-                              handleInputChange(field.id, validFiles.slice(0, field.fileOptions.maxAllowed));
+                              handleInputChange(field.id, validFiles);
                           } else {
                               handleInputChange(field.id, files);
                           }

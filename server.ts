@@ -55,8 +55,8 @@ async function startServer() {
   const PORT = 3000;
 
   // Middleware to parse JSON bodies
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
   // API Route: Configuration health check
   app.get('/api/config', (req, res) => {

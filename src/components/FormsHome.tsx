@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2, Copy } from 'lucide-react';
+import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2, Copy, Users } from 'lucide-react';
 import { FormConfig, ExcelSaveConfig } from '../types';
 
 interface SavedForm {
@@ -152,6 +152,16 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
                        <Trash2 size={14} />
                      </button>
                      <a 
+                     href={`${safeOrigin}/responses/${form.id}`} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     onClick={e => e.stopPropagation()} 
+                     className="p-1.5 text-slate-400 hover:text-indigo-600 bg-white rounded shadow-xs hover:shadow-sm"
+                     title="View Responses"
+                   >
+                     <Users size={14} />
+                   </a>
+                   <a 
                      href={`${safeOrigin}/form/${form.id}`} 
                      target="_blank" 
                      rel="noopener noreferrer" 
