@@ -178,15 +178,7 @@ export async function createFolderInChannel(
 ) {
   const encodedChannel = encodeURIComponent(channelName);
   const isSpecialRoot = channelName === 'Root Directory';
-  
-  let endpoint = '';
-  if (isSpecialRoot) {
-    endpoint = `drives/${driveId}/root/children`;
-  } else {
-    // First, resolve the folder ID for the channel
-    const channelFolder = await fetchGraph(`drives/${driveId}/root:/${encodedChannel}`, tokens, setTokens);
-    endpoint = `drives/${driveId}/items/${channelFolder.id}/children`;
-  }
+  const endpoint = isSpecialRoot ? `drives/${driveId}/root/children` : `drives/${driveId}/root:/${encodedChannel}:/children`;
   
   return await fetchGraph(endpoint, tokens, setTokens, {
     method: 'POST',
@@ -378,17 +370,8 @@ export async function createExcelFileWithTable(
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // 2. Add headers in range A1 to column mapping (e.g. A1:E1 for 5 headers)
-  const getColLetter = (colIndex: number) => {
-    let letter = '';
-    let temp = colIndex;
-    while (temp > 0) {
-      let rem = (temp - 1) % 26;
-      letter = String.fromCharCode(65 + rem) + letter;
-      temp = Math.floor((temp - 1) / 26);
-    }
-    return letter;
-  };
-  const endColLetter = getColLetter(headers.length);
+  // Let's find end column letter: A, B, C, D, E, F ...
+  const endColLetter = String.fromCharCode(65 + headers.length - 1);
   const rangeAddress = `Sheet1!A1:${endColLetter}1`;
 
   const addHeaderEndpoint = `drives/${driveId}/items/${fileId}/workbook/worksheets('Sheet1')/range(address='${rangeAddress}')`;
@@ -520,24 +503,6 @@ export async function createWorksheet(
   });
 }
 
-export async function getWorksheetUsedRange(
-  driveId: string,
-  itemId: string,
-  sheetName: string,
-  tokens: MSTokens,
-  setTokens: (t: MSTokens) => void
-) {
-  const endpoint = `drives/${driveId}/items/${itemId}/workbook/worksheets('${sheetName}')/usedRange`;
-  try {
-    return await fetchGraph(endpoint, tokens, setTokens);
-  } catch (err: any) {
-    if (err.message && err.message.includes('ItemNotFound')) {
-       return null; // Return null if nothing is used yet
-    }
-    throw err;
-  }
-}
-
 export async function createTableInWorksheet(
   driveId: string,
   itemId: string,
@@ -548,32 +513,9 @@ export async function createTableInWorksheet(
   tokens: MSTokens,
   setTokens: (t: MSTokens) => void
 ) {
-  // Convert column (1-based index) to letter
-  const getColLetter = (colIndex: number) => {
-    let letter = '';
-    let temp = colIndex;
-    while (temp > 0) {
-      let rem = (temp - 1) % 26;
-      letter = String.fromCharCode(65 + rem) + letter;
-      temp = Math.floor((temp - 1) / 26);
-    }
-    return letter;
-  };
-  
-  // Extract start column letter
-  const match = startAddress.match(/^([A-Z]+)(\d+)$/i);
-  if (!match) throw new Error("Invalid start address format");
-  const startColStr = match[1].toUpperCase();
-  const startRow = match[2];
-
-  // Convert start column string to index
-  let startColIdx = 0;
-  for (let i = 0; i < startColStr.length; i++) {
-    startColIdx = startColIdx * 26 + (startColStr.charCodeAt(i) - 64);
-  }
-
-  const endColIdx = startColIdx + headers.length - 1;
-  const endColLetter = getColLetter(endColIdx);
+  // Add headers first
+  const endColLetter = String.fromCharCode(startAddress.charCodeAt(0) + headers.length - 1);
+  const startRow = startAddress.substring(1);
   const rangeAddress = `${sheetName}!${startAddress}:${endColLetter}${startRow}`;
 
   const addHeaderEndpoint = `drives/${driveId}/items/${itemId}/workbook/worksheets('${sheetName}')/range(address='${rangeAddress}')`;

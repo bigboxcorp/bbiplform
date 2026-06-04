@@ -610,7 +610,7 @@ async function startServer() {
       const excelConfig = JSON.parse(row.excelConfig);
       const formConfig = JSON.parse(row.config);
       
-      const driveId = excelConfig.driveId || (excelConfig.driveItemId && excelConfig.driveItemId.includes('!') ? excelConfig.driveItemId.split('!')[0] : null);
+      const driveId = excelConfig.driveId || (excelConfig.driveItemId.includes('!') ? excelConfig.driveItemId.split('!')[0] : null);
       if (!driveId) throw new Error("Could not determine driveId");
 
       const endpoint = `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${excelConfig.driveItemId}/workbook/tables/${excelConfig.tableName}/rows`;

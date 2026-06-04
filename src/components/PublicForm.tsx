@@ -187,7 +187,7 @@ export default function PublicForm({ formId }: { formId: string }) {
       
       const authWindow = window.open(url, 'microsoft_oauth_popup', 'width=600,height=700,status=no,resizable=yes');
       if (!authWindow) {
-        alert('Allow popups for M365 Login.');
+        alert('Popup blocker active. Please allow popups for M365 Login.');
         setIsLoggingIn(false);
         return;
       }

@@ -45,10 +45,10 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
              .then(res => res.json())
              .then(data => setForms(data));
         } else {
-           alert('Duplicate failed');
+           alert('Failed to duplicate form');
         }
       })
-      .catch(err => alert('Duplicate error.'));
+      .catch(err => alert('Error duplicating form'));
     }
   };
 
@@ -61,12 +61,12 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
           if (data.success) {
             setForms(forms.filter(f => f.id !== id));
           } else {
-            alert('Delete failed.');
+            alert('Failed to delete form');
           }
         })
         .catch(err => {
           console.error(err);
-          alert('Delete error.');
+          alert('Error deleting form');
         });
     }
   };
