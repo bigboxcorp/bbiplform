@@ -406,6 +406,22 @@ async function startServer() {
     }
   });
 
+  app.delete('/api/forms/:id', (req, res) => {
+    try {
+      const formId = req.params.id;
+      const deleteStmt = db.prepare(`DELETE FROM forms WHERE id = ?`);
+      const result = deleteStmt.run(formId);
+
+      if (result.changes > 0) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'Form not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get('/api/forms/:id', (req, res) => {
     try {
       const formId = req.params.id;

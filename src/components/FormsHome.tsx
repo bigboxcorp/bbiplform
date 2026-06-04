@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle } from 'lucide-react';
+import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2 } from 'lucide-react';
 import { FormConfig, ExcelSaveConfig } from '../types';
 
 interface SavedForm {
@@ -27,6 +27,25 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
         console.error(err);
         setLoading(false);
       });
+  };
+
+  const handleDeleteForm = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
+      fetch(`/api/forms/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setForms(forms.filter(f => f.id !== id));
+          } else {
+            alert('Failed to delete form');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert('Error deleting form');
+        });
+    }
   };
 
   const safeOrigin = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1') ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
@@ -94,16 +113,25 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
               
               <div className="border-t border-slate-100 p-3 bg-slate-50 flex items-center justify-between group-hover:bg-blue-50/50 transition-colors">
                  <span className="text-xs font-bold text-slate-600 group-hover:text-blue-700">Edit Form</span>
-                 <a 
-                   href={`${safeOrigin}/form/${form.id}`} 
-                   target="_blank" 
-                   rel="noopener noreferrer" 
-                   onClick={e => e.stopPropagation()} 
-                   className="p-1.5 text-slate-400 hover:text-blue-600 bg-white rounded shadow-xs hover:shadow-sm"
-                   title="Open Live Form"
-                 >
-                   <ExternalLink size={14} />
-                 </a>
+                 <div className="flex gap-2">
+                   <button 
+                     onClick={e => handleDeleteForm(e, form.id)}
+                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
+                     title="Delete Form"
+                   >
+                     <Trash2 size={14} />
+                   </button>
+                   <a 
+                     href={`${safeOrigin}/form/${form.id}`} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     onClick={e => e.stopPropagation()} 
+                     className="p-1.5 text-slate-400 hover:text-blue-600 bg-white rounded shadow-xs hover:shadow-sm"
+                     title="Open Live Form"
+                   >
+                     <ExternalLink size={14} />
+                   </a>
+                 </div>
               </div>
             </div>
           ))}
