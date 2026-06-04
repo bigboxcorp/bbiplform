@@ -596,6 +596,11 @@ export default function MicrosoftConnector({
       return;
     }
 
+    if (mappedTables[`${selectedFileId}_${selectedTableName}`] && mappedTables[`${selectedFileId}_${selectedTableName}`] !== formId) {
+      alert('Error: This table is already linked to another form. Please select a different table.');
+      return;
+    }
+
     const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
 
     try {
