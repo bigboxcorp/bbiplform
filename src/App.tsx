@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const path = window.location.pathname;
   const urlParams = new URLSearchParams(window.location.search);
   const formIdQS = urlParams.get('form');
   const responsesIdQS = urlParams.get('responses');
@@ -29,10 +30,18 @@ export default function App() {
   if (formIdQS) {
     return <PublicForm formId={formIdQS} />;
   }
+  if (path.includes('/form/')) {
+    const formId = path.split('/form/')[1].replace(/\/$/, "");
+    if (formId) return <PublicForm formId={formId} />;
+  }
 
   // ROUTER: Route to View Responses
   if (responsesIdQS) {
     return <ResponsesViewer formId={responsesIdQS} />;
+  }
+  if (path.includes('/responses/')) {
+    const formId = path.split('/responses/')[1].replace(/\/$/, "");
+    if (formId) return <ResponsesViewer formId={formId} />;
   }
 
   // BUILDER APP LOGIC

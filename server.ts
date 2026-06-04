@@ -309,11 +309,23 @@ async function startServer() {
         headers: headers,
       };
 
-      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
-        if (Object.keys(req.body).length > 0 || req.headers['content-type']?.includes('json')) {
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+        if (req.body && (Object.keys(req.body).length > 0 || req.headers['content-type']?.includes('json'))) {
            fetchOptions.body = JSON.stringify(req.body);
            headers['Content-Type'] = 'application/json';
         }
+      }
+
+      // Explicitly lowercase content-type override for native fetch just in case
+      if (headers['Content-Type']) {
+         headers['content-type'] = headers['Content-Type'];
+         delete headers['Content-Type'];
+      }
+
+      console.log(`[GRAPH CALL] ${req.method} ${graphUrl}`);
+      console.log(`[GRAPH HEADERS]`, headers);
+      if (fetchOptions.body) {
+        console.log(`[GRAPH BODY LENGTH]`, fetchOptions.body.toString().length);
       }
 
       const graphRes = await fetch(graphUrl, fetchOptions);
@@ -711,17 +723,22 @@ async function startServer() {
           (fetchOptions.headers as Record<string, string>)['Content-Type'] = cType;
         }
 
-        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
           if (req.body && req.body._isBase64File) {
             fetchOptions.body = Buffer.from(req.body.payload, 'base64');
-            (fetchOptions.headers as Record<string, string>)['Content-Type'] = req.body.contentType || 'application/octet-stream';
-          } else {
+            (fetchOptions.headers as Record<string, string>)['content-type'] = req.body.contentType || 'application/octet-stream';
+          } else if (req.body) {
             fetchOptions.body = JSON.stringify(req.body);
-            if (!(fetchOptions.headers as Record<string, string>)['Content-Type']) {
-               (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
-            }
+            (fetchOptions.headers as Record<string, string>)['content-type'] = 'application/json';
           }
         }
+        
+        // Remove uppercase Content-Type if it exists
+        if ((fetchOptions.headers as Record<string, string>)['Content-Type']) {
+           delete (fetchOptions.headers as Record<string, string>)['Content-Type'];
+        }
+
+        console.log(`[PUBLIC GRAPH CALL] ${req.method} ${graphUrl}`);
         return fetch(graphUrl, fetchOptions);
       };
 
