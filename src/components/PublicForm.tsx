@@ -18,6 +18,8 @@ export default function PublicForm({ formId }: { formId: string }) {
   const [timeError, setTimeError] = useState<string | null>(null);
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     fetch(`/api/forms/${formId}`)
       .then(res => {
         if (!res.ok) throw new Error('Form not found or unavailable.');
@@ -34,80 +36,99 @@ export default function PublicForm({ formId }: { formId: string }) {
         setFormData(data);
         setLoading(false);
 
-        // Check Time Constraints
-        const ranges = data.config.settings?.dailyTimeRanges;
-        if (ranges && ranges.length > 0) {
-            const hasValidRanges = ranges.some((r: any) => r.start && r.end);
-            if (hasValidRanges) {
-                const now = new Date();
-                const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                
-                let isAllowed = false;
-                for (const r of ranges) {
-                    if (r.start && r.end) {
-                        const [sH, sM] = r.start.split(':').map(Number);
-                        const [eH, eM] = r.end.split(':').map(Number);
-                        const startMinutes = sH * 60 + sM;
-                        const endMinutes = eH * 60 + eM;
-                        if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
-                            isAllowed = true;
-                            break;
+        // Check Time Constraints function
+        const checkTimeConstraints = (currentData: SavedForm) => {
+            const ranges = currentData.config.settings?.dailyTimeRanges;
+            if (ranges && ranges.length > 0) {
+                const hasValidRanges = ranges.some((r: any) => r.start && r.end);
+                if (hasValidRanges) {
+                    const now = new Date();
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    
+                    let isAllowed = false;
+                    for (const r of ranges) {
+                        if (r.start && r.end) {
+                            const [sH, sM] = r.start.split(':').map(Number);
+                            const [eH, eM] = r.end.split(':').map(Number);
+                            const startMinutes = sH * 60 + sM;
+                            const endMinutes = eH * 60 + eM;
+                            if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+                                isAllowed = true;
+                                break;
+                            }
                         }
                     }
-                }
-                if (!isAllowed) {
-                    let nextSlot = null;
-                    let nextSlotTomorrow = null;
+                    if (!isAllowed) {
+                        let nextSlot = null;
+                        let nextSlotTomorrow = null;
 
-                    // Sort ranges by start time
-                    const sortedRanges = [...ranges].sort((a: any, b: any) => {
-                         if (!a.start || !b.start) return 0;
-                         const aMins = parseInt(a.start.split(':')[0]) * 60 + parseInt(a.start.split(':')[1]);
-                         const bMins = parseInt(b.start.split(':')[0]) * 60 + parseInt(b.start.split(':')[1]);
-                         return aMins - bMins;
-                    });
+                        // Sort ranges by start time
+                        const sortedRanges = [...ranges].sort((a: any, b: any) => {
+                             if (!a.start || !b.start) return 0;
+                             const aMins = parseInt(a.start.split(':')[0]) * 60 + parseInt(a.start.split(':')[1]);
+                             const bMins = parseInt(b.start.split(':')[0]) * 60 + parseInt(b.start.split(':')[1]);
+                             return aMins - bMins;
+                        });
 
-                    for (const r of sortedRanges) {
-                         if (r.start && r.end) {
-                             const sH = parseInt(r.start.split(':')[0]);
-                             const sM = parseInt(r.start.split(':')[1]);
-                             const startMinutes = sH * 60 + sM;
-                             if (startMinutes > currentMinutes) {
-                                 nextSlot = r;
-                                 break;
+                        for (const r of sortedRanges) {
+                             if (r.start && r.end) {
+                                 const sH = parseInt(r.start.split(':')[0]);
+                                 const sM = parseInt(r.start.split(':')[1]);
+                                 const startMinutes = sH * 60 + sM;
+                                 if (startMinutes > currentMinutes) {
+                                     nextSlot = r;
+                                     break;
+                                 }
+                                 if (!nextSlotTomorrow) nextSlotTomorrow = r;
                              }
-                             if (!nextSlotTomorrow) nextSlotTomorrow = r;
-                         }
-                    }
+                        }
 
-                    if (!nextSlot && nextSlotTomorrow) nextSlot = nextSlotTomorrow;
+                        if (!nextSlot && nextSlotTomorrow) nextSlot = nextSlotTomorrow;
 
-                    if (nextSlot) {
-                       const formatTime = (timeStr: string) => {
-                           let [h, m] = timeStr.split(':').map(Number);
-                           const ampm = h >= 12 ? 'PM' : 'AM';
-                           h = h % 12 || 12;
-                           return `${h}:${m < 10 ? '0'+m : m} ${ampm}`;
-                       };
-                       setTimeError(`This form is currently closed. It will open again at ${formatTime(nextSlot.start)} to ${formatTime(nextSlot.end)}.`);
+                        if (nextSlot) {
+                           const formatTime = (timeStr: string) => {
+                               let [h, m] = timeStr.split(':').map(Number);
+                               const ampm = h >= 12 ? 'PM' : 'AM';
+                               h = h % 12 || 12;
+                               return `${h}:${m < 10 ? '0'+m : m} ${ampm}`;
+                           };
+                           setTimeError(`This form is currently closed. It will open again at ${formatTime(nextSlot.start)} to ${formatTime(nextSlot.end)}.`);
+                        } else {
+                           setTimeError('This form is currently closed and only accepts submissions during specific times of the day.');
+                        }
                     } else {
-                       setTimeError('This form is currently closed and only accepts submissions during specific times of the day.');
+                        setTimeError(null);
                     }
+                } else {
+                   setTimeError(null);
                 }
+            } else {
+               setTimeError(null);
             }
-        }
+        };
 
+        checkTimeConstraints(data);
+
+        // Set up interval to recheck every minute
+        intervalId = setInterval(() => {
+            checkTimeConstraints(data);
+        }, 10000); // Check every 10 seconds for better responsiveness
 
         let storedAuth = localStorage.getItem('respondent_tokens');
         if (!storedAuth) storedAuth = localStorage.getItem('microsoft_tokens');
         if (storedAuth) {
            try { setRespondentTokens(JSON.parse(storedAuth)); } catch(e){}
         }
+
       })
       .catch(err => {
         setError(err.message);
         setLoading(false);
       });
+
+      return () => {
+          if (intervalId) clearInterval(intervalId);
+      };
   }, [formId]);
 
   const needsLogin = formData?.config?.settings?.requireMicrosoftLogin || 
