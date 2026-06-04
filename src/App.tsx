@@ -30,8 +30,12 @@ export default function App() {
   if (formIdQS) {
     return <PublicForm formId={formIdQS} />;
   }
+  if (path.startsWith('/f/')) {
+    const formId = path.split('/f/')[1].split('/')[0].split('?')[0];
+    if (formId) return <PublicForm formId={formId} />;
+  }
   if (path.includes('/form/')) {
-    const formId = path.split('/form/')[1].replace(/\/$/, "");
+    const formId = path.split('/form/')[1].split('/')[0].split('?')[0];
     if (formId) return <PublicForm formId={formId} />;
   }
 
@@ -39,8 +43,12 @@ export default function App() {
   if (responsesIdQS) {
     return <ResponsesViewer formId={responsesIdQS} />;
   }
+  if (path.startsWith('/r/')) {
+    const formId = path.split('/r/')[1].split('/')[0].split('?')[0];
+    if (formId) return <ResponsesViewer formId={formId} />;
+  }
   if (path.includes('/responses/')) {
-    const formId = path.split('/responses/')[1].replace(/\/$/, "");
+    const formId = path.split('/responses/')[1].split('/')[0].split('?')[0];
     if (formId) return <ResponsesViewer formId={formId} />;
   }
 
@@ -259,7 +267,7 @@ export default function App() {
       
       const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
       const origin = isLocalhost ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
-      const pUrl = `${origin}/?form=${finalId}`;
+      const pUrl = `${origin}/f/${finalId}`;
       setPublishedUrl(pUrl);
       
       if (!isNew) {
@@ -279,7 +287,7 @@ export default function App() {
     if (id) {
       const isLocalhost = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
       const origin = isLocalhost ? window.location.origin : window.location.origin.replace(/^http:\/\//i, 'https://');
-      const pUrl = `${origin}/?form=${id}`;
+      const pUrl = `${origin}/f/${id}`;
       setPublishedUrl(pUrl);
     } else {
        setPublishedUrl(null);
@@ -441,11 +449,11 @@ export default function App() {
                     <FileText size={12} /> Monitor Responses
                   </h4>
                   <div className="flex bg-white border border-blue-200 rounded-md overflow-hidden shadow-xs">
-                    <input type="text" readOnly value={publishedUrl.replace('?form=', '?responses=')} className="w-full text-[11px] text-slate-700 pl-2 py-1.5 bg-transparent focus:outline-none" />
-                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl.replace('?form=', '?responses=')); alert('Link copied!'); }} className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Copy">
+                    <input type="text" readOnly value={publishedUrl.replace('/f/', '/r/')} className="w-full text-[11px] text-slate-700 pl-2 py-1.5 bg-transparent focus:outline-none" />
+                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl.replace('/f/', '/r/')); alert('Link copied!'); }} className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Copy">
                       <Copy size={12} />
                     </button>
-                    <a href={publishedUrl.replace('?form=', '?responses=')} target="_blank" rel="noopener noreferrer" className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Open Link">
+                    <a href={publishedUrl.replace('/f/', '/r/')} target="_blank" rel="noopener noreferrer" className="bg-blue-50 hover:bg-blue-100 px-2 text-blue-800 transition-colors flex items-center justify-center shrink-0 border-l border-blue-200 cursor-pointer" title="Open Link">
                       <ExternalLink size={12} />
                     </a>
                   </div>
