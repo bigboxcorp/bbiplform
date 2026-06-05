@@ -20,6 +20,7 @@ export interface FormField {
   gridCols?: string[]; // For grid types
   fileOptions?: { maxAllowed: number; maxSizeMB: number; allowedTypes?: string[] }; // For file upload
   required: boolean;
+  allowRemarks?: boolean;
   placeholder?: string;
   
   // Advanced validations
@@ -59,6 +60,7 @@ export interface FormSettings {
   dailyTimeRanges?: TimeRange[];
   submissionPrefix?: string;
   submissionStartNumber?: number;
+  showProgressBar?: boolean;
 }
 
 export interface FormConfig {

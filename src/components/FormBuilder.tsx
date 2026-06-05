@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormConfig, FormField } from '../types';
-import { Plus, Trash, Type, AlignLeft, Calendar, Hash, GripVertical, Check } from 'lucide-react';
+import { Plus, Trash, Type, AlignLeft, Calendar, Hash, GripVertical, Check, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface FormBuilderProps {
   config: FormConfig;
@@ -107,6 +107,24 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
   // Quick preset fields
   // Removed as requested
 
+  const moveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const newFields = [...config.fields];
+    const temp = newFields[index];
+    newFields[index] = newFields[index - 1];
+    newFields[index - 1] = temp;
+    onChange({ ...config, fields: newFields, settings: { ...config.settings, isMappingLocked: false } });
+  };
+
+  const moveFieldDown = (index: number) => {
+    if (index === config.fields.length - 1) return;
+    const newFields = [...config.fields];
+    const temp = newFields[index];
+    newFields[index] = newFields[index + 1];
+    newFields[index + 1] = temp;
+    onChange({ ...config, fields: newFields, settings: { ...config.settings, isMappingLocked: false } });
+  };
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6" id="form-builder-component">
       {/* Header and presets */}
@@ -202,6 +220,17 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
 
                   <div className="flex items-center gap-3 shrink-0">
                     {field.type !== 'section_break' && (
+                      <label className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer" title="Enable remarks input field">
+                        <input 
+                          type="checkbox" 
+                          checked={field.allowRemarks || false}
+                          onChange={(e) => updateField(field.id, { allowRemarks: e.target.checked })}
+                          className="rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 size-3.5 cursor-pointer"
+                        />
+                        Remarks
+                      </label>
+                    )}
+                    {field.type !== 'section_break' && (
                       <label className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer">
                         <input 
                           type="checkbox" 
@@ -212,13 +241,31 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                         Required
                       </label>
                     )}
-                    <button 
-                      onClick={() => removeField(field.id)}
-                      className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                      title="Remove Field"
-                    >
-                      <Trash size={14} />
-                    </button>
+                    <div className="flex gap-1 ml-2 border-l border-slate-200 pl-3">
+                      <button 
+                        onClick={() => moveFieldUp(idx)}
+                        disabled={idx === 0}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${idx === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}
+                        title="Move Up"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button 
+                        onClick={() => moveFieldDown(idx)}
+                        disabled={idx === config.fields.length - 1}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${idx === config.fields.length - 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'}`}
+                        title="Move Down"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                      <button 
+                        onClick={() => removeField(field.id)}
+                        className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer ml-1"
+                        title="Remove Field"
+                      >
+                        <Trash size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

@@ -415,13 +415,19 @@ export default function FormSubmissionForm({
             return ''; 
           });
         } else {
+          const flatValues: any[] = [];
+          dataFields.forEach(f => {
+             const val = finalFormData[f.id];
+             flatValues.push(val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '');
+             if (f.allowRemarks) {
+                 const rm = finalFormData[f.id + '_remarks'];
+                 flatValues.push(rm !== undefined ? (Array.isArray(rm) ? rm.join(', ') : rm) : '');
+             }
+          });
           rowData = [
             submissionId,
             currentTimestampFormatted,
-            ...dataFields.map(f => {
-              const val = finalFormData[f.id];
-              return val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '';
-            })
+            ...flatValues
           ];
         }
 
@@ -497,13 +503,19 @@ export default function FormSubmissionForm({
             return ''; 
           });
         } else {
+          const flatValues: any[] = [];
+          dataFields.forEach(f => {
+             const val = finalFormData[f.id];
+             flatValues.push(val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '');
+             if (f.allowRemarks) {
+                 const rm = finalFormData[f.id + '_remarks'];
+                 flatValues.push(rm !== undefined ? (Array.isArray(rm) ? rm.join(', ') : rm) : '');
+             }
+          });
           rowData = [
             submissionId,
             currentTimestampFormatted,
-            ...dataFields.map(f => {
-              const val = finalFormData[f.id];
-              return val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '';
-            })
+            ...flatValues
           ];
         }
 
@@ -554,19 +566,30 @@ export default function FormSubmissionForm({
 
   const handleExportCSV = () => {
     if (submissions.length === 0) return;
-    const headers = ['Submission ID', 'Submitted At', ...dataFields.map(f => f.label)];
+    const flatHeaders: string[] = [];
+    dataFields.forEach(f => {
+       flatHeaders.push(f.label);
+       if (f.allowRemarks) flatHeaders.push(f.label + ' Remarks');
+    });
+    
+    const headers = ['Submission ID', 'Submitted At', ...flatHeaders];
     const rows = submissions.map(sub => {
+      const flatVals: string[] = [];
+      dataFields.forEach(field => {
+        const val = sub.data[field.id];
+        const stringified = val !== undefined && val !== null ? String(Array.isArray(val) ? val.join(', ') : val).replace(/"/g, '""') : '';
+        flatVals.push(stringified.includes(',') || stringified.includes('\n') || stringified.includes('"') ? `"${stringified}"` : stringified);
+        
+        if (field.allowRemarks) {
+           const rm = sub.data[field.id + '_remarks'];
+           const rmStr = rm !== undefined && rm !== null ? String(Array.isArray(rm) ? rm.join(', ') : rm).replace(/"/g, '""') : '';
+           flatVals.push(rmStr.includes(',') || rmStr.includes('\n') || rmStr.includes('"') ? `"${rmStr}"` : rmStr);
+        }
+      });
       return [
         sub.id,
         new Date(sub.submittedAt).toLocaleString(),
-        ...dataFields.map(field => {
-          const val = sub.data[field.id];
-          if (val === undefined || val === null) return '';
-          const stringified = String(Array.isArray(val) ? val.join(', ') : val).replace(/"/g, '""');
-          return stringified.includes(',') || stringified.includes('\n') || stringified.includes('"')
-            ? `"${stringified}"`
-            : stringified;
-        })
+        ...flatVals
       ];
     });
 
@@ -611,6 +634,25 @@ export default function FormSubmissionForm({
       targetActionDisplay = 'submit';
   }
 
+  // Calculate Progress
+  let progressPercentage = 0;
+  if (formConfig.settings?.showProgressBar && submitStatus !== 'success') {
+      const formFields = formConfig.fields.filter(f => f.type !== 'section_break');
+      const requiredFields = formFields.filter(f => f.required);
+      const denominator = requiredFields.length > 0 ? requiredFields.length : formFields.length;
+      if (denominator > 0) {
+          const numerator = (requiredFields.length > 0 ? requiredFields : formFields).filter(f => {
+              const val = formData[f.id];
+              if (Array.isArray(val)) return val.length > 0;
+              if (typeof val === 'object' && val !== null) return Object.keys(val).length > 0;
+              return !!val;
+          }).length;
+          progressPercentage = Math.round((numerator / denominator) * 100);
+      } else {
+          progressPercentage = 100;
+      }
+  }
+
   return (
     <div className="space-y-6" id="form-submission-container">
       {formConfig.settings?.logoUrl && (
@@ -619,6 +661,15 @@ export default function FormSubmissionForm({
         </div>
       )}
       
+      {formConfig.settings?.showProgressBar && submitStatus !== 'success' && (
+         <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mb-2">
+            <div 
+               className="h-full transition-all duration-300 ease-out"
+               style={{ width: `${progressPercentage}%`, ...themeStyle, borderTopWidth: 0, backgroundColor: themeStyle.borderColor || '#2563eb' }}
+            ></div>
+         </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col" style={{ borderTopWidth: '8px', ...themeStyle }}>
         {formConfig.settings?.coverUrl && (
            <img src={formConfig.settings.coverUrl?.replace(/^http:\/\//i, 'https://')} alt="Cover" className="w-full h-32 sm:h-48 object-cover" />
@@ -986,6 +1037,19 @@ export default function FormSubmissionForm({
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                    )}
+
+                    {field.allowRemarks && (
+                      <div className="mt-2 text-sm text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                         <label className="block text-xs font-semibold mb-1 text-slate-600">Remarks / Additional Info</label>
+                         <input 
+                           type="text" 
+                           value={formData[`${field.id}_remarks`] || ''}
+                           onChange={(e) => handleInputChange(`${field.id}_remarks`, e.target.value)}
+                           className="w-full text-sm px-3 py-1.5 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                           placeholder="Type remarks here..."
+                         />
                       </div>
                     )}
 

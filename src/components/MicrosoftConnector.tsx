@@ -123,10 +123,19 @@ export default function MicrosoftConnector({
       const existingColNames = existingCols.map((c: any) => c.name.toLowerCase());
       
       const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+      const getFieldHeaders = (fields: typeof fieldsToSave) => {
+         const hdrs: string[] = [];
+         fields.forEach(f => {
+            hdrs.push(f.label);
+            if (f.allowRemarks) hdrs.push(f.label + ' Remarks');
+         });
+         return hdrs;
+      };
+
       const requiredCols = [
         'Submission ID',
         'Submitted At',
-        ...fieldsToSave.map(f => f.label)
+        ...getFieldHeaders(fieldsToSave)
       ];
 
       let addedCols = 0;
@@ -355,13 +364,22 @@ export default function MicrosoftConnector({
       setApiError(null);
       
       const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+      const getFieldHeaders = (fields: typeof fieldsToSave) => {
+         const hdrs: string[] = [];
+         fields.forEach(f => {
+            hdrs.push(f.label);
+            if (f.allowRemarks) hdrs.push(f.label + ' Remarks');
+         });
+         return hdrs;
+      };
+
       const headers = ['Submission ID', 'Submitted At'];
       
       if (formConfig.settings?.collectEmails) {
          headers.push('Submitter Email');
       }
       
-      headers.push(...fieldsToSave.map(f => f.label));
+      headers.push(...getFieldHeaders(fieldsToSave));
 
       const result = await createExcelFileWithTable(
         driveId,
@@ -394,6 +412,9 @@ export default function MicrosoftConnector({
       const mapping: Record<string, string> = {};
       fieldsToSave.forEach(f => {
         mapping[f.id] = f.label;
+        if (f.allowRemarks) {
+           mapping[f.id + '_remarks'] = f.label + ' Remarks';
+        }
       });
       if (formConfig.settings?.collectEmails) {
          mapping['respondent_email'] = 'Submitter Email';
@@ -437,13 +458,22 @@ export default function MicrosoftConnector({
 
       // Derive headers from form fields (Required to set up table)
       const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
+      const getFieldHeaders = (fields: typeof fieldsToSave) => {
+         const hdrs: string[] = [];
+         fields.forEach(f => {
+            hdrs.push(f.label);
+            if (f.allowRemarks) hdrs.push(f.label + ' Remarks');
+         });
+         return hdrs;
+      };
+
       const headers = ['Submission ID', 'Submitted At'];
       
       if (formConfig.settings?.collectEmails) {
          headers.push('Submitter Email');
       }
       
-      headers.push(...fieldsToSave.map(f => f.label));
+      headers.push(...getFieldHeaders(fieldsToSave));
 
       const result = await createExcelFileWithTable(
         driveId,
@@ -483,6 +513,9 @@ export default function MicrosoftConnector({
       }
       fieldsToSave.forEach(field => {
         mapping[field.id] = field.label;
+        if (field.allowRemarks) {
+           mapping[field.id + '_remarks'] = field.label + ' Remarks';
+        }
       });
 
       const selectedTeamName = teams.find(t => t.id === selectedTeamId)?.displayName || 'Team';
@@ -561,7 +594,15 @@ export default function MicrosoftConnector({
        setApiError(null);
        
        const fieldsToSave = formConfig.fields.filter(f => f.type !== 'section_break');
-       const headers = ['Submission ID', 'Submitted At', ...fieldsToSave.map(f => f.label)];
+       const getFieldHeaders = (fields: typeof fieldsToSave) => {
+         const hdrs: string[] = [];
+         fields.forEach(f => {
+            hdrs.push(f.label);
+            if (f.allowRemarks) hdrs.push(f.label + ' Remarks');
+         });
+         return hdrs;
+       };
+       const headers = ['Submission ID', 'Submitted At', ...getFieldHeaders(fieldsToSave)];
        const tName = newTableName.trim().replace(/[^a-zA-Z0-9]/g, '');
 
        let startAddress = 'A1';
@@ -654,6 +695,9 @@ export default function MicrosoftConnector({
     // Default Map based on identical names
     fieldsToSave.forEach(f => {
       mapping[f.id] = f.label;
+      if (f.allowRemarks) {
+         mapping[f.id + '_remarks'] = f.label + ' Remarks';
+      }
     });
 
     setSaveConfig({
@@ -959,7 +1003,7 @@ export default function MicrosoftConnector({
                     >
                       <div className="flex items-center justify-center gap-2">
                         <Sparkles size={16} className={setupMode === 'auto' ? "text-emerald-500 fill-emerald-500" : "text-slate-400"} />
-                        AUTO SETUP
+                        GENERATE
                       </div>
                       <div className="text-[10px] font-normal opacity-80 mt-1">Generate new Excel and columns instantly</div>
                     </button>
@@ -974,7 +1018,7 @@ export default function MicrosoftConnector({
                     >
                       <div className="flex items-center justify-center gap-2">
                         <Settings2 size={16} className={setupMode === 'manual' ? "text-blue-500" : "text-slate-400"} />
-                        MANUAL SETUP
+                        SETUP
                       </div>
                       <div className="text-[10px] font-normal opacity-80 mt-1">Map configuration to existing document</div>
                     </button>
@@ -1065,9 +1109,9 @@ export default function MicrosoftConnector({
                           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold px-4 py-2.5 flex items-center justify-center gap-1.5 shadow-sm hover:shadow active:scale-95 cursor-pointer transition-all"
                         >
                           {isCreatingExcel ? (
-                            <><RefreshCw size={12} className="animate-spin" /> Auto Setting Up...</>
+                            <><RefreshCw size={12} className="animate-spin" /> Generating...</>
                           ) : (
-                            <><Sparkles size={13} /> 1-Click Auto Setup (Recommended)</>
+                            <><Sparkles size={13} /> 1-Click Generate (Recommended)</>
                           )}
                         </button>
                       </div>
@@ -1102,7 +1146,7 @@ export default function MicrosoftConnector({
                   {setupMode === 'manual' && (
                   <div className="space-y-4 bg-blue-50/30 border border-blue-100 rounded-xl p-5 shadow-sm animate-fadeIn">
                     <div className="flex items-center gap-2 mb-2">
-                       <span className="p-1 px-2.5 bg-blue-100 text-blue-700 rounded border border-blue-200 font-bold text-[10px]">MANUAL SETUP</span>
+                       <span className="p-1 px-2.5 bg-blue-100 text-blue-700 rounded border border-blue-200 font-bold text-[10px]">SETUP</span>
                        <span className="text-sm font-bold text-slate-800">Map to Existing Document</span>
                     </div>
 
@@ -1316,17 +1360,6 @@ export default function MicrosoftConnector({
                           <Copy size={12} /> Copy
                       </button>
                    </div>
-                   <div className="bg-white border border-blue-100 rounded-lg p-3 my-2 text-xs flex justify-between items-center">
-                      <div>
-                          <span className="text-[10px] uppercase font-bold text-blue-500 block">Monitor Responses (Admin Link)</span>
-                          <a href={publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium hover:underline flex items-center gap-1 mt-0.5">
-                             {publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')} <ExternalLink size={12} />
-                          </a>
-                      </div>
-                      <button onClick={() => { navigator.clipboard.writeText(publishedUrl.includes('/f/') ? publishedUrl.replace('/f/', '/r/') : publishedUrl.replace('?form=', '?responses=').replace('/form/', '/responses/')); alert('Link Copied!'); }} className="text-[10px] font-bold border border-slate-200 rounded px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center gap-1 cursor-pointer">
-                          <Copy size={12} /> Copy
-                      </button>
-                   </div>
                  </>
               )}
 
@@ -1443,6 +1476,15 @@ export default function MicrosoftConnector({
                </div>
                <span className="text-[9px] text-slate-400 block mt-1">Sets the format for Sequential Submission IDs. Will look like format Prefix00Number</span>
             </div>
+
+            {/* Show Progress Bar */}
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input type="checkbox" checked={formConfig.settings?.showProgressBar || false} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, showProgressBar: e.target.checked }})} className="mt-0.5" />
+              <div>
+                 <span className="text-xs font-bold text-slate-800 block group-hover:text-blue-600">Show Progress Bar</span>
+                 <span className="text-[10px] text-slate-500">Displays a visual progress bar indicating how much of the form is completed based on required fields.</span>
+              </div>
+            </label>
 
             {/* Allow Multiple Submissions */}
             <label className="flex items-start gap-3 cursor-pointer group">
