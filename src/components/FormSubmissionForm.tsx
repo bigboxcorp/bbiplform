@@ -100,6 +100,15 @@ export default function FormSubmissionForm({
 
   const fieldsToRender = pages.length > 0 ? pages[currentPage] : [];
 
+  const formatFieldValue = (val: any) => {
+     if (val === undefined || val === null) return '';
+     if (Array.isArray(val)) return val.join(', ');
+     if (typeof val === 'object' && !(val instanceof File)) {
+         return Object.entries(val).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : (typeof v === 'object' && v !== null ? Object.entries(v).map(([sk, sv]) => `${sk}(${sv})`).join(', ') : v)}`).join(' | ');
+     }
+     return String(val);
+  };
+
   const handleNextOrSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -180,6 +189,22 @@ export default function FormSubmissionForm({
             const keys = Object.keys(val || {});
             if (keys.length < field.gridRows.length) {
                 errors[field.id] = `Please answer all rows.`;
+            }
+        }
+        if (field.type === 'grid_input' && field.required && field.gridRows?.length && field.gridInputCols?.length) {
+            const valObj = val || {};
+            for (const row of field.gridRows) {
+               const rowAnswers = valObj[row] || {};
+               let hasAll = true;
+               for (const col of field.gridInputCols) {
+                  if (!rowAnswers[col.name]) {
+                      hasAll = false; break;
+                  }
+               }
+               if (!hasAll) {
+                  errors[field.id] = `Please fill all required inputs for all items.`;
+                  break;
+               }
             }
         }
         if (field.type === 'file' && field.fileOptions && Array.isArray(val)) {
@@ -349,11 +374,6 @@ export default function FormSubmissionForm({
                  }
              }
              finalFormData[field.id] = uploadedLinks.join(', ');
-         } else if (field.type === 'grid_radio' || field.type === 'grid_checkbox') {
-             const valObj = formData[field.id];
-             if (valObj && typeof valObj === 'object') {
-                 finalFormData[field.id] = Object.entries(valObj).map(([row, checked]) => `${row}: ${Array.isArray(checked) ? checked.join('|') : checked}`).join(' ; ');
-             }
          }
       }
 
@@ -400,7 +420,7 @@ export default function FormSubmissionForm({
               if (fId === '__submitted_at') return currentTimestampFormatted;
               if (fId === 'respondent_email') return respondentEmail || 'Anonymous';
               const userVal = finalFormData[fId];
-              return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
+              return formatFieldValue(userVal);
             }
 
             if (colNameClean.includes('submission id') || colNameClean === 'id') return submissionId;
@@ -410,7 +430,7 @@ export default function FormSubmissionForm({
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
             if (matchedField) {
               const val = finalFormData[matchedField.id];
-              return val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '';
+              return formatFieldValue(val);
             }
             return ''; 
           });
@@ -418,10 +438,10 @@ export default function FormSubmissionForm({
           const flatValues: any[] = [];
           dataFields.forEach(f => {
              const val = finalFormData[f.id];
-             flatValues.push(val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '');
+             flatValues.push(formatFieldValue(val));
              if (f.allowRemarks) {
                  const rm = finalFormData[f.id + '_remarks'];
-                 flatValues.push(rm !== undefined ? (Array.isArray(rm) ? rm.join(', ') : rm) : '');
+                 flatValues.push(formatFieldValue(rm));
              }
           });
           rowData = [
@@ -498,7 +518,7 @@ export default function FormSubmissionForm({
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
             if (matchedField) {
               const val = finalFormData[matchedField.id];
-              return val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '';
+              return formatFieldValue(val);
             }
             return ''; 
           });
@@ -506,10 +526,10 @@ export default function FormSubmissionForm({
           const flatValues: any[] = [];
           dataFields.forEach(f => {
              const val = finalFormData[f.id];
-             flatValues.push(val !== undefined ? (Array.isArray(val) ? val.join(', ') : val) : '');
+             flatValues.push(formatFieldValue(val));
              if (f.allowRemarks) {
                  const rm = finalFormData[f.id + '_remarks'];
-                 flatValues.push(rm !== undefined ? (Array.isArray(rm) ? rm.join(', ') : rm) : '');
+                 flatValues.push(formatFieldValue(rm));
              }
           });
           rowData = [
@@ -577,12 +597,12 @@ export default function FormSubmissionForm({
       const flatVals: string[] = [];
       dataFields.forEach(field => {
         const val = sub.data[field.id];
-        const stringified = val !== undefined && val !== null ? String(Array.isArray(val) ? val.join(', ') : val).replace(/"/g, '""') : '';
+        const stringified = formatFieldValue(val).replace(/"/g, '""');
         flatVals.push(stringified.includes(',') || stringified.includes('\n') || stringified.includes('"') ? `"${stringified}"` : stringified);
         
         if (field.allowRemarks) {
            const rm = sub.data[field.id + '_remarks'];
-           const rmStr = rm !== undefined && rm !== null ? String(Array.isArray(rm) ? rm.join(', ') : rm).replace(/"/g, '""') : '';
+           const rmStr = formatFieldValue(rm).replace(/"/g, '""');
            flatVals.push(rmStr.includes(',') || rmStr.includes('\n') || rmStr.includes('"') ? `"${rmStr}"` : rmStr);
         }
       });
@@ -634,10 +654,53 @@ export default function FormSubmissionForm({
       targetActionDisplay = 'submit';
   }
 
-  // Calculate Progress
+  // Calculate Progress robustly by tracing the expected path based on current formData
   let progressPercentage = 0;
   if (formConfig.settings?.showProgressBar && submitStatus !== 'success') {
-      const formFields = formConfig.fields.filter(f => f.type !== 'section_break');
+      let expectedPathFields: typeof formConfig.fields = [];
+      let currentIdx = 0;
+      let failsafe = 0;
+      
+      while (currentIdx < pages.length && failsafe < 50) {
+          failsafe++;
+          const pageFields = pages[currentIdx];
+          expectedPathFields = [...expectedPathFields, ...pageFields];
+          
+          let nextAction = 'next';
+          let nextTarget = '';
+          
+          if (pageFields[0]?.type === 'section_break' && pageFields[0].sectionEndAction) {
+              nextAction = pageFields[0].sectionEndAction;
+              nextTarget = pageFields[0].sectionEndTarget || '';
+          }
+          
+          const rev = [...pageFields].reverse();
+          for (const field of rev) {
+             if (['radio', 'select'].includes(field.type) && field.logicJumps && formData[field.id]) {
+                const jump = field.logicJumps.find((j: any) => j.value === formData[field.id]);
+                if (jump && jump.action) {
+                   nextAction = jump.action;
+                   nextTarget = jump.targetSectionId || '';
+                   break;
+                }
+             }
+          }
+          
+          if (nextAction === 'submit') {
+             break; // Path ends here
+          } else if (nextAction === 'goto_section' && nextTarget) {
+             const targetIdx = pages.findIndex(p => p[0]?.id === nextTarget);
+             if (targetIdx !== -1 && targetIdx > currentIdx) {
+                currentIdx = targetIdx;
+             } else {
+                currentIdx++;
+             }
+          } else {
+             currentIdx++;
+          }
+      }
+
+      const formFields = expectedPathFields.filter(f => f.type !== 'section_break');
       const requiredFields = formFields.filter(f => f.required);
       const denominator = requiredFields.length > 0 ? requiredFields.length : formFields.length;
       if (denominator > 0) {
@@ -1031,6 +1094,60 @@ export default function FormSubmissionForm({
                                       }}
                                       className="w-4 h-4 text-blue-600 rounded"
                                     />
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* GRID INPUT */}
+                    {field.type === 'grid_input' && (
+                      <div className="overflow-x-auto mt-2 border border-slate-200 rounded-lg">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-slate-50 text-slate-600 font-medium">
+                            <tr>
+                              <th className="p-3 border-b border-slate-200">Item</th>
+                              {(field.gridInputCols || []).map((col, cIdx) => (
+                                <th key={cIdx} className="p-3 border-b border-slate-200 text-center">{col.name}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(field.gridRows || []).map((row, rIdx) => (
+                              <tr key={rIdx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                                <td className="p-3 font-medium text-slate-700">{row}</td>
+                                {(field.gridInputCols || []).map((col, cIdx) => (
+                                  <td key={cIdx} className="p-2 text-center min-w-[120px]">
+                                    {col.type === 'dropdown' ? (
+                                      <select
+                                        value={formData[field.id]?.[row]?.[col.name] || ''}
+                                        onChange={(e) => {
+                                           const curFull = formData[field.id] || {};
+                                           const curRow = curFull[row] || {};
+                                           handleInputChange(field.id, { ...curFull, [row]: { ...curRow, [col.name]: e.target.value } });
+                                        }}
+                                        className="w-full text-xs px-2 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-500 bg-white"
+                                      >
+                                        <option value="">-- Choose --</option>
+                                        {(col.options || []).map((opt, oIdx) => (
+                                          <option key={oIdx} value={opt}>{opt}</option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <input 
+                                        type="text"
+                                        value={formData[field.id]?.[row]?.[col.name] || ''}
+                                        onChange={(e) => {
+                                           const curFull = formData[field.id] || {};
+                                           const curRow = curFull[row] || {};
+                                           handleInputChange(field.id, { ...curFull, [row]: { ...curRow, [col.name]: e.target.value } });
+                                        }}
+                                        className="w-full text-xs px-2 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-500"
+                                      />
+                                    )}
                                   </td>
                                 ))}
                               </tr>

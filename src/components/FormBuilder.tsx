@@ -38,7 +38,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
     }
 
     const needsOptions = ['select', 'radio', 'checkbox'].includes(newFieldType);
-    const needsGrid = ['grid_radio', 'grid_checkbox'].includes(newFieldType);
+    const needsGrid = ['grid_radio', 'grid_checkbox', 'grid_input'].includes(newFieldType);
 
     const parsedOptions = needsOptions && newFieldOptionsStr.trim() 
       ? newFieldOptionsStr.split(',').map(s => s.trim()).filter(Boolean) 
@@ -60,7 +60,8 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
       placeholder: `Fill ${newFieldLabel.trim()}...`,
       options: parsedOptions,
       gridRows: parsedGridRows,
-      gridCols: parsedGridCols
+      gridCols: parsedGridCols,
+      gridInputCols: newFieldType === 'grid_input' ? parsedGridCols?.map((col, idx) => ({ id: `col_${idx}`, name: col, type: 'text' })) : undefined
     };
 
     onChange({
@@ -211,6 +212,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                          <option value="checkbox">MULTIPLE CHOICE</option>
                          <option value="grid_radio">RADIO GRID</option>
                          <option value="grid_checkbox">CHECKBOX GRID</option>
+                         <option value="grid_input">INPUT GRID</option>
                          <option value="file">FILE UPLOAD</option>
                          <option value="rating">RATING</option>
                          <option value="section_break">SECTION BREAK</option>
@@ -441,11 +443,11 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                 )}
 
                 {/* Grid Rows Configuration */}
-                {['grid_radio', 'grid_checkbox'].includes(field.type) && (
+                {['grid_radio', 'grid_checkbox', 'grid_input'].includes(field.type) && (
                   <div className="text-xs pl-10 pr-2 mt-2 space-y-3 rounded-lg">
                     {/* Rows */}
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Rows (Questions):</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Rows (Questions / Items):</span>
                       <div className="flex flex-wrap gap-1.5">
                         {(field.gridRows || []).map((row, rIdx) => (
                           <div key={rIdx} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 pl-2.5 pr-1.5 py-0.5 rounded-full font-semibold text-slate-700 text-[11px] shadow-xs">
@@ -457,18 +459,72 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                       </div>
                     </div>
                     {/* Cols */}
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Columns (Choices):</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(field.gridCols || []).map((col, cIdx) => (
-                          <div key={cIdx} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 pl-2.5 pr-1.5 py-0.5 rounded-full font-semibold text-slate-700 text-[11px] shadow-xs">
-                            <span>{col}</span>
-                            <button onClick={() => updateField(field.id, { gridCols: (field.gridCols || []).filter((_, i) => i !== cIdx) })} className="p-0.5 rounded-full text-slate-400 hover:text-red-500">×</button>
-                          </div>
-                        ))}
-                        <button onClick={() => { const v = prompt('Enter column label (e.g. Yes/No, 1-5):'); if(v) updateField(field.id, { gridCols: [...(field.gridCols || []), v.trim()] }); }} className="text-[10px] px-3 py-1 border border-dashed border-slate-400 text-slate-600 hover:bg-slate-50 bg-white font-bold rounded-full cursor-pointer">+ Add Column</button>
+                    {['grid_radio', 'grid_checkbox'].includes(field.type) && (
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Columns (Choices):</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(field.gridCols || []).map((col, cIdx) => (
+                            <div key={cIdx} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 pl-2.5 pr-1.5 py-0.5 rounded-full font-semibold text-slate-700 text-[11px] shadow-xs">
+                              <span>{col}</span>
+                              <button onClick={() => updateField(field.id, { gridCols: (field.gridCols || []).filter((_, i) => i !== cIdx) })} className="p-0.5 rounded-full text-slate-400 hover:text-red-500">×</button>
+                            </div>
+                          ))}
+                          <button onClick={() => { const v = prompt('Enter column label (e.g. Yes/No, 1-5):'); if(v) updateField(field.id, { gridCols: [...(field.gridCols || []), v.trim()] }); }} className="text-[10px] px-3 py-1 border border-dashed border-slate-400 text-slate-600 hover:bg-slate-50 bg-white font-bold rounded-full cursor-pointer">+ Add Column</button>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    {field.type === 'grid_input' && (
+                      <div className="space-y-2 border border-blue-200 bg-white p-3 rounded-xl mt-2">
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Input Columns (Properties for each row):</span>
+                         {(field.gridInputCols || []).map((col, cIdx) => (
+                            <div key={cIdx} className="flex flex-wrap sm:flex-nowrap gap-2 items-center bg-slate-50 p-2 rounded border border-slate-200">
+                               <input 
+                                 type="text" 
+                                 value={col.name} 
+                                 onChange={e => {
+                                    const nextCols = [...(field.gridInputCols || [])];
+                                    nextCols[cIdx] = { ...nextCols[cIdx], name: e.target.value };
+                                    updateField(field.id, { gridInputCols: nextCols });
+                                 }}
+                                 className="flex-1 text-[11px] px-2 py-1 border border-slate-300 rounded outline-none w-24"
+                                 placeholder="Col Header"
+                               />
+                               <select 
+                                 value={col.type} 
+                                 onChange={e => {
+                                    const nextCols = [...(field.gridInputCols || [])];
+                                    nextCols[cIdx] = { ...nextCols[cIdx], type: e.target.value as 'text'|'dropdown' };
+                                    updateField(field.id, { gridInputCols: nextCols });
+                                 }}
+                                 className="text-[11px] px-2 py-1 border border-slate-300 rounded outline-none"
+                               >
+                                 <option value="text">Input Text</option>
+                                 <option value="dropdown">Dropdown</option>
+                               </select>
+                               {col.type === 'dropdown' && (
+                                 <input
+                                   type="text"
+                                   value={(col.options || []).join(', ')}
+                                   onChange={e => {
+                                      const nextCols = [...(field.gridInputCols || [])];
+                                      nextCols[cIdx] = { ...nextCols[cIdx], options: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) };
+                                      updateField(field.id, { gridInputCols: nextCols });
+                                   }}
+                                   className="flex-1 text-[11px] px-2 py-1 border border-slate-300 rounded outline-none"
+                                   placeholder="Options (comma separated)"
+                                 />
+                               )}
+                               <button onClick={() => {
+                                   const nextCols = (field.gridInputCols || []).filter((_, i) => i !== cIdx);
+                                   updateField(field.id, { gridInputCols: nextCols });
+                               }} className="p-1 rounded bg-red-50 text-red-500 hover:bg-red-100"><Trash size={12} /></button>
+                            </div>
+                         ))}
+                         <button onClick={() => { 
+                             updateField(field.id, { gridInputCols: [...(field.gridInputCols || []), { id: `col_${Date.now()}`, name: 'New Col', type: 'text' }] }); 
+                         }} className="text-[10px] px-3 py-1 border border-dashed border-slate-400 text-slate-600 hover:bg-slate-50 bg-white font-bold rounded cursor-pointer mt-1 block w-fit">+ Add Matrix Column</button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -518,6 +574,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                  <option value="file">File Upload</option>
                  <option value="grid_radio">Grid (Radio Choice)</option>
                  <option value="grid_checkbox">Grid (Checkboxes)</option>
+                 <option value="grid_input">Grid (Inputs & Dropdowns)</option>
                  <option value="section_break">--- Section Break ---</option>
                </select>
              </div>
@@ -537,18 +594,19 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
              </div>
            )}
 
-           {['grid_radio', 'grid_checkbox'].includes(newFieldType) && (
+           {['grid_radio', 'grid_checkbox', 'grid_input'].includes(newFieldType) && (
              <div className="bg-blue-50/50 border border-blue-100 p-3 rounded-lg flex flex-col sm:flex-row gap-3 animate-fadeIn">
                <div className="flex-1 flex flex-col gap-1.5">
-                 <label className="text-[10px] uppercase font-bold text-blue-800">Rows / Questions (Comma Separated)</label>
+                 <label className="text-[10px] uppercase font-bold text-blue-800">Rows / Items (Comma Separated)</label>
                  <input 
                    type="text" 
                    value={newFieldGridRowsStr} 
                    onChange={(e) => setNewFieldGridRowsStr(e.target.value)}
-                   placeholder="e.g. Quality, Speed, Price"
+                   placeholder="e.g. Item 1, Item 2, Item 3"
                    className="w-full text-xs px-3 py-2 bg-white border border-blue-200 rounded outline-none focus:border-blue-500"
                  />
                </div>
+               {['grid_radio', 'grid_checkbox'].includes(newFieldType) && (
                <div className="flex-1 flex flex-col gap-1.5">
                  <label className="text-[10px] uppercase font-bold text-blue-800">Columns / Choices (Comma Separated)</label>
                  <input 
@@ -559,6 +617,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                    className="w-full text-xs px-3 py-2 bg-white border border-blue-200 rounded outline-none focus:border-blue-500"
                  />
                </div>
+               )}
              </div>
            )}
 
