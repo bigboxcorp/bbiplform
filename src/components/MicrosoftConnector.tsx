@@ -716,6 +716,18 @@ export default function MicrosoftConnector({
     setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: true } });
   };
 
+  useEffect(() => {
+    const handleSyncMap = () => {
+      handleApplyLayoutSelections();
+    };
+    window.addEventListener('trigger-sync-map', handleSyncMap);
+    return () => window.removeEventListener('trigger-sync-map', handleSyncMap);
+  }, [
+    selectedTeamId, selectedChannelId, selectedFileId, selectedTableName, 
+    selectedChannelName, driveId, selectedFileName, selectedSheetName, 
+    uploadFolderPath, formConfig, teams, tokens
+  ]);
+
   // 8. Trigger Microsoft OAuth auth-code popup flow
   const handleConnectM365 = async () => {
     try {
@@ -1311,7 +1323,7 @@ export default function MicrosoftConnector({
                       <button
                         onClick={handleApplyLayoutSelections}
                         disabled={isModifyingTable}
-                        className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all active:scale-95 cursor-pointer mt-2 shadow disabled:opacity-50"
+                        className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all active:scale-95 cursor-pointer mt-2 shadow disabled:opacity-50 hidden"
                         id="save-mapping-btn"
                       >
                         📄 Lock Map & Link Table
@@ -1341,7 +1353,7 @@ export default function MicrosoftConnector({
                          setFormConfig({ ...formConfig, settings: { ...formConfig.settings, isMappingLocked: false } });
                      }
                   }}
-                  className="px-2 py-1 bg-white text-rose-600 rounded text-[10px] font-bold border border-rose-200 hover:bg-rose-50 shadow-xs transition-colors cursor-pointer"
+                  className="hidden px-2 py-1 bg-white text-rose-600 rounded text-[10px] font-bold border border-rose-200 hover:bg-rose-50 shadow-xs transition-colors cursor-pointer"
                 >
                   Unlock Sync Mapping
                 </button>

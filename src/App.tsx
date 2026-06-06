@@ -17,7 +17,9 @@ import {
   ExternalLink,
   Share2,
   ChevronLeft,
-  FileText
+  FileText,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 export default function App() {
@@ -399,12 +401,41 @@ export default function App() {
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
            {(activeTab === 'designer' || activeTab === 'connector') && (
-             <button 
-                onClick={handlePublish} disabled={isPublishing || !saveConfig || formConfig.settings?.isMappingLocked === false} 
-                className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center gap-1.5 items-center transition-colors cursor-pointer shadow-sm"
-             >
-                <CheckCircle size={14} /> {isPublishing ? 'Saving...' : (activeFormId ? 'Save & Update Form' : 'Publish New Form')}
-             </button>
+             <>
+               {tokens && (
+                 <button
+                   onClick={() => {
+                     if (formConfig.settings?.isMappingLocked) {
+                       if (window.confirm("Are you sure you want to unlock map syncing? This form will stop working and you will need to re-map it before it can receive responses again.")) {
+                           const newSettings = { ...formConfig.settings, isMappingLocked: false };
+                           handleFormConfigChange({ ...formConfig, settings: newSettings });
+                       }
+                     } else {
+                        if (activeTab !== 'connector') {
+                           alert('Please navigate to Settings (Connector) tab to configure mapping before syncing.');
+                           setActiveTab('connector');
+                           return;
+                        }
+                        window.dispatchEvent(new CustomEvent('trigger-sync-map'));
+                     }
+                   }}
+                   className={`w-full sm:w-auto px-4 py-2 rounded-lg font-bold text-xs transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-1.5 ${
+                      formConfig.settings?.isMappingLocked 
+                        ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300'
+                   }`}
+                 >
+                   {formConfig.settings?.isMappingLocked ? <Lock size={14} /> : <Unlock size={14} />} 
+                   Sync Mapping
+                 </button>
+               )}
+               <button 
+                  onClick={handlePublish} disabled={isPublishing || !saveConfig || formConfig.settings?.isMappingLocked === false} 
+                  className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center gap-1.5 items-center transition-colors cursor-pointer shadow-sm"
+               >
+                  <CheckCircle size={14} /> {isPublishing ? 'Saving...' : (activeFormId ? 'Save & Update Form' : 'Publish New Form')}
+               </button>
+             </>
            )}
         </div>
       </div>
