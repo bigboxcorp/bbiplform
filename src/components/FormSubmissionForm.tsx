@@ -955,7 +955,7 @@ export default function FormSubmissionForm({
                       <div className="space-y-2">
                         <select
                           value={
-                            (field.options || []).includes(formData[field.id]) || !formData[field.id]
+                            (field.options || []).includes(formData[field.id]) || !formData[field.id] || !field.allowOther
                               ? (formData[field.id] || '')
                               : '__other__'
                           }
@@ -968,9 +968,9 @@ export default function FormSubmissionForm({
                           {(field.options || []).map((opt, oIdx) => (
                             <option key={oIdx} value={opt}>{opt}</option>
                           ))}
-                          <option value="__other__">Other (Please specify)</option>
+                          {field.allowOther && <option value="__other__">Other (Please specify)</option>}
                         </select>
-                        {(formData[field.id] === '__other__' || (formData[field.id] && !(field.options || []).includes(formData[field.id]))) && (
+                        {field.allowOther && (formData[field.id] === '__other__' || (formData[field.id] && !(field.options || []).includes(formData[field.id]))) && (
                           <input
                             type="text"
                             placeholder="Please specify..."
@@ -999,6 +999,27 @@ export default function FormSubmissionForm({
                             <span className="text-sm text-slate-700 font-medium group-hover:text-slate-900">{opt}</span>
                           </label>
                         ))}
+                        {field.allowOther && (
+                          <div className="flex items-center gap-2 mt-0.5 group">
+                            <input
+                              type="radio"
+                              name={field.id}
+                              checked={formData[field.id] !== undefined && !(field.options || []).includes(formData[field.id])}
+                              onChange={() => handleInputChange(field.id, '__other_radio__')}
+                              className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 mt-0.5"
+                            />
+                            <div className="flex-1 max-w-[200px]">
+                               <input 
+                                 type="text" 
+                                 placeholder="Other..."
+                                 value={formData[field.id] !== undefined && !(field.options || []).includes(formData[field.id]) && formData[field.id] !== '__other_radio__' ? formData[field.id] : ''}
+                                 onChange={(e) => handleInputChange(field.id, e.target.value)}
+                                 onClick={() => { if ((field.options || []).includes(formData[field.id]) || formData[field.id] === undefined) handleInputChange(field.id, '__other_radio__'); }}
+                                 className="w-full text-sm px-2 py-1 border-b border-slate-300 focus:border-blue-500 bg-transparent outline-none transition-colors"
+                               />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1016,6 +1037,39 @@ export default function FormSubmissionForm({
                             <span className="text-sm text-slate-700 font-medium group-hover:text-slate-900">{opt}</span>
                           </label>
                         ))}
+                        {field.allowOther && (() => {
+                           const valSet = Array.isArray(formData[field.id]) ? formData[field.id] : [];
+                           const otherVal = valSet.find((v: string) => !(field.options || []).includes(v));
+                           const isOtherChecked = otherVal !== undefined;
+                           return (
+                             <div className="flex items-center gap-2 mt-0.5 group">
+                                <input 
+                                  type="checkbox"
+                                  checked={isOtherChecked}
+                                  onChange={(e) => {
+                                      if (e.target.checked) handleInputChange(field.id, [...valSet, '__other_checkbox__']);
+                                      else handleInputChange(field.id, valSet.filter((v: string) => (field.options || []).includes(v)));
+                                  }}
+                                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mt-0.5"
+                                />
+                                <div className="flex-1 max-w-[200px]">
+                                   <input
+                                      type="text"
+                                      placeholder="Other..."
+                                      value={otherVal === '__other_checkbox__' ? '' : (otherVal || '')}
+                                      onChange={(e) => {
+                                          const nextVals = valSet.filter((v: string) => (field.options || []).includes(v));
+                                          if (e.target.value) nextVals.push(e.target.value);
+                                          else nextVals.push('__other_checkbox__');
+                                          handleInputChange(field.id, nextVals);
+                                      }}
+                                      onClick={() => { if (!isOtherChecked) handleInputChange(field.id, [...valSet, '__other_checkbox__']); }}
+                                      className="w-full text-sm px-2 py-1 border-b border-slate-300 focus:border-blue-500 bg-transparent outline-none transition-colors"
+                                   />
+                                </div>
+                             </div>
+                           );
+                        })()}
                       </div>
                     )}
 
@@ -1149,7 +1203,7 @@ export default function FormSubmissionForm({
                                       <div className="space-y-1">
                                         <select
                                           value={
-                                            (col.options || []).includes(formData[field.id]?.[row]?.[col.name]) || !formData[field.id]?.[row]?.[col.name]
+                                            (col.options || []).includes(formData[field.id]?.[row]?.[col.name]) || !formData[field.id]?.[row]?.[col.name] || !col.allowOther
                                               ? (formData[field.id]?.[row]?.[col.name] || '')
                                               : '__other__'
                                           }
@@ -1164,9 +1218,9 @@ export default function FormSubmissionForm({
                                           {(col.options || []).map((opt, oIdx) => (
                                             <option key={oIdx} value={opt}>{opt}</option>
                                           ))}
-                                          <option value="__other__">Other</option>
+                                          {col.allowOther && <option value="__other__">Other</option>}
                                         </select>
-                                        {(formData[field.id]?.[row]?.[col.name] === '__other__' || (formData[field.id]?.[row]?.[col.name] && !(col.options || []).includes(formData[field.id]?.[row]?.[col.name]))) && (
+                                        {col.allowOther && (formData[field.id]?.[row]?.[col.name] === '__other__' || (formData[field.id]?.[row]?.[col.name] && !(col.options || []).includes(formData[field.id]?.[row]?.[col.name]))) && (
                                           <input
                                             type="text"
                                             placeholder="Specify..."

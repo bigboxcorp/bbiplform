@@ -243,6 +243,17 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                         Required
                       </label>
                     )}
+                    {['select', 'radio', 'checkbox'].includes(field.type) && (
+                      <label className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer" title="Allow respondents to manually enter an 'Other' answer">
+                        <input 
+                          type="checkbox" 
+                          checked={field.allowOther || false}
+                          onChange={(e) => updateField(field.id, { allowOther: e.target.checked })}
+                          className="rounded text-purple-600 focus:ring-purple-500 border-slate-300 size-3.5 cursor-pointer"
+                        />
+                        Allow Other
+                      </label>
+                    )}
                     <div className="flex gap-1 ml-2 border-l border-slate-200 pl-3">
                       <button 
                         onClick={() => moveFieldUp(idx)}
@@ -502,17 +513,27 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                                  <option value="dropdown">Dropdown</option>
                                </select>
                                {col.type === 'dropdown' && (
-                                 <input
-                                   type="text"
-                                   value={(col.options || []).join(', ')}
-                                   onChange={e => {
-                                      const nextCols = [...(field.gridInputCols || [])];
-                                      nextCols[cIdx] = { ...nextCols[cIdx], options: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) };
-                                      updateField(field.id, { gridInputCols: nextCols });
-                                   }}
-                                   className="flex-1 text-[11px] px-2 py-1 border border-slate-300 rounded outline-none"
-                                   placeholder="Options (comma separated)"
-                                 />
+                                 <>
+                                   <input
+                                     type="text"
+                                     value={(col.options || []).join(', ')}
+                                     onChange={e => {
+                                        const nextCols = [...(field.gridInputCols || [])];
+                                        nextCols[cIdx] = { ...nextCols[cIdx], options: e.target.value.split(',').map(s=>s.trim()).filter(Boolean) };
+                                        updateField(field.id, { gridInputCols: nextCols });
+                                     }}
+                                     className="flex-1 text-[11px] px-2 py-1 border border-slate-300 rounded outline-none"
+                                     placeholder="Options (comma separated)"
+                                   />
+                                   <label className="flex items-center gap-1 whitespace-nowrap text-[10px] text-slate-600 cursor-pointer pt-0.5">
+                                     <input type="checkbox" checked={col.allowOther || false} onChange={e => {
+                                        const nextCols = [...(field.gridInputCols || [])];
+                                        nextCols[cIdx] = { ...nextCols[cIdx], allowOther: e.target.checked };
+                                        updateField(field.id, { gridInputCols: nextCols });
+                                     }} className="rounded" />
+                                     Allow Other
+                                   </label>
+                                 </>
                                )}
                                <button onClick={() => {
                                    const nextCols = (field.gridInputCols || []).filter((_, i) => i !== cIdx);

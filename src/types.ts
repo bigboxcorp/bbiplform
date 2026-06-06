@@ -16,6 +16,7 @@ export interface GridInputColumn {
   name: string;
   type: 'text' | 'dropdown';
   options?: string[]; // for dropdown
+  allowOther?: boolean; // for dropdown other option
 }
 
 export interface FormField {
@@ -23,6 +24,7 @@ export interface FormField {
   label: string;
   type: 'short_text' | 'long_text' | 'number' | 'date' | 'time' | 'rating' | 'select' | 'radio' | 'checkbox' | 'file' | 'grid_radio' | 'grid_checkbox' | 'grid_input' | 'section_break';
   options?: string[]; // Only for select, radio, checkbox
+  allowOther?: boolean; // For select, radio, checkbox
   gridRows?: string[]; // For grid types
   gridCols?: string[]; // For grid types (radio/checkbox)
   gridInputCols?: GridInputColumn[]; // For grid_input type
