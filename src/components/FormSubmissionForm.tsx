@@ -46,6 +46,7 @@ export default function FormSubmissionForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [formResetKey, setFormResetKey] = useState(0);
 
   // Handle value triggers
   const handleInputChange = (fieldId: string, val: any) => {
@@ -782,7 +783,20 @@ export default function FormSubmissionForm({
 
             {formConfig.settings?.allowMultipleSubmissions !== false && (
               <button 
-                onClick={() => setSubmitStatus('idle')}
+                onClick={() => {
+                  setSubmitStatus('idle');
+                  setCurrentPage(0);
+                  setFormData({});
+                  setPageHistory([]);
+                  setValidationErrors({});
+                  setManualEmail('');
+                  setRecordEmailChecked(true);
+                  setFormResetKey(prev => prev + 1);
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    document.getElementById('form-top')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 100);
+                }}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow active:scale-95 transition-all cursor-pointer"
               >
                 Submit Another Entry
@@ -790,7 +804,7 @@ export default function FormSubmissionForm({
             )}
           </div>
         ) : (
-          <form onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
+          <form key={formResetKey} id="form-top" onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
             {formConfig.settings?.collectEmails && (
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-3">
                 {userEmail ? (
@@ -1309,7 +1323,7 @@ export default function FormSubmissionForm({
                     </>
                   ) : (
                     <>
-                       Next Section
+                      Next
                     </>
                   )}
                 </button>
