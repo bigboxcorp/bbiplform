@@ -852,12 +852,7 @@ export default function FormSubmissionForm({
               <div className="space-y-6">
                 {fieldsToRender.map(field => {
                    if (field.type === 'section_break') {
-                     return (
-                        <div key={field.id} className="pt-2 pb-1 border-b border-slate-200">
-                           <h2 className="text-xl font-bold text-slate-800">{field.label}</h2>
-                           {field.placeholder && <p className="text-sm text-slate-500 mt-1">{field.placeholder}</p>}
-                        </div>
-                     );
+                     return null;
                    }
                    return (
                   <div key={field.id} className="space-y-2">
