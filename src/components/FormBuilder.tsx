@@ -212,7 +212,7 @@ export default function FormBuilder({ config, onChange }: FormBuilderProps) {
                          <option value="checkbox">MULTIPLE CHOICE</option>
                          <option value="grid_radio">RADIO GRID</option>
                          <option value="grid_checkbox">CHECKBOX GRID</option>
-                         <option value="grid_input">INPUT GRID</option>
+                         <option value="grid_input">GRID (INPUTS & DROPDOWNS)</option>
                          <option value="file">FILE UPLOAD</option>
                          <option value="rating">RATING</option>
                          <option value="section_break">SECTION BREAK</option>

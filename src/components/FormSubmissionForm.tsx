@@ -170,9 +170,12 @@ export default function FormSubmissionForm({
       const val = formData[field.id];
       const isEmpty = val === undefined || val === null || (typeof val === 'string' && val.trim() === '') || (Array.isArray(val) && val.length === 0);
       
-      if (field.required && isEmpty) {
+      if (field.required && isEmpty && field.type !== 'grid_radio' && field.type !== 'grid_checkbox' && field.type !== 'grid_input') {
         errors[field.id] = `${field.label} is required.`;
       } else if (!isEmpty) {
+        if (val === '__other__') {
+            errors[field.id] = `Please specify a value.`;
+        }
         if (field.type === 'short_text' || field.type === 'long_text') {
           if (field.minLength && String(val).length < field.minLength) errors[field.id] = `Minimum ${field.minLength} characters required.`;
           if (field.maxLength && String(val).length > field.maxLength) errors[field.id] = `Maximum ${field.maxLength} characters allowed.`;
@@ -193,18 +196,22 @@ export default function FormSubmissionForm({
         }
         if (field.type === 'grid_input' && field.required && field.gridRows?.length && field.gridInputCols?.length) {
             const valObj = val || {};
+            let hasAtLeastOneCompleteRow = false;
             for (const row of field.gridRows) {
                const rowAnswers = valObj[row] || {};
-               let hasAll = true;
+               let hasAllInRow = true;
                for (const col of field.gridInputCols) {
-                  if (!rowAnswers[col.name]) {
-                      hasAll = false; break;
+                  if (!rowAnswers[col.name] || rowAnswers[col.name] === '__other__') {
+                      hasAllInRow = false; break;
                   }
                }
-               if (!hasAll) {
-                  errors[field.id] = `Please fill all required inputs for all items.`;
+               if (hasAllInRow) {
+                  hasAtLeastOneCompleteRow = true;
                   break;
                }
+            }
+            if (!hasAtLeastOneCompleteRow) {
+                errors[field.id] = `Please fill all required inputs for at least one item.`;
             }
         }
         if (field.type === 'file' && field.fileOptions && Array.isArray(val)) {
@@ -945,18 +952,35 @@ export default function FormSubmissionForm({
 
                     {/* DROPDOWN */}
                     {field.type === 'select' && (
-                      <select
-                        value={formData[field.id] || ''}
-                        onChange={(e) => handleInputChange(field.id, e.target.value)}
-                        className={`w-full text-sm px-4 py-2.5 bg-white rounded-lg border focus:outline-none focus:ring-2 transition-all font-medium text-slate-800 ${
-                          validationErrors[field.id] ? 'border-red-350 focus:ring-red-500 bg-red-50/20' : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
-                        }`}
-                      >
-                        <option value="">{field.placeholder || `Select ${field.label}...`}</option>
-                        {(field.options || []).map((opt, oIdx) => (
-                          <option key={oIdx} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      <div className="space-y-2">
+                        <select
+                          value={
+                            (field.options || []).includes(formData[field.id]) || !formData[field.id]
+                              ? (formData[field.id] || '')
+                              : '__other__'
+                          }
+                          onChange={(e) => handleInputChange(field.id, e.target.value)}
+                          className={`w-full text-sm px-4 py-2.5 bg-white rounded-lg border focus:outline-none focus:ring-2 transition-all font-medium text-slate-800 ${
+                            validationErrors[field.id] ? 'border-red-350 focus:ring-red-500 bg-red-50/20' : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                          }`}
+                        >
+                          <option value="">{field.placeholder || `Select ${field.label}...`}</option>
+                          {(field.options || []).map((opt, oIdx) => (
+                            <option key={oIdx} value={opt}>{opt}</option>
+                          ))}
+                          <option value="__other__">Other (Please specify)</option>
+                        </select>
+                        {(formData[field.id] === '__other__' || (formData[field.id] && !(field.options || []).includes(formData[field.id]))) && (
+                          <input
+                            type="text"
+                            placeholder="Please specify..."
+                            value={formData[field.id] === '__other__' ? '' : formData[field.id]}
+                            onChange={(e) => handleInputChange(field.id, e.target.value)}
+                            className="w-full text-sm px-4 py-2.5 bg-white rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            autoFocus
+                          />
+                        )}
+                      </div>
                     )}
 
                     {/* RADIO BUTTONS */}
@@ -1122,20 +1146,41 @@ export default function FormSubmissionForm({
                                 {(field.gridInputCols || []).map((col, cIdx) => (
                                   <td key={cIdx} className="p-2 text-center min-w-[120px]">
                                     {col.type === 'dropdown' ? (
-                                      <select
-                                        value={formData[field.id]?.[row]?.[col.name] || ''}
-                                        onChange={(e) => {
-                                           const curFull = formData[field.id] || {};
-                                           const curRow = curFull[row] || {};
-                                           handleInputChange(field.id, { ...curFull, [row]: { ...curRow, [col.name]: e.target.value } });
-                                        }}
-                                        className="w-full text-xs px-2 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-500 bg-white"
-                                      >
-                                        <option value="">-- Choose --</option>
-                                        {(col.options || []).map((opt, oIdx) => (
-                                          <option key={oIdx} value={opt}>{opt}</option>
-                                        ))}
-                                      </select>
+                                      <div className="space-y-1">
+                                        <select
+                                          value={
+                                            (col.options || []).includes(formData[field.id]?.[row]?.[col.name]) || !formData[field.id]?.[row]?.[col.name]
+                                              ? (formData[field.id]?.[row]?.[col.name] || '')
+                                              : '__other__'
+                                          }
+                                          onChange={(e) => {
+                                             const curFull = formData[field.id] || {};
+                                             const curRow = curFull[row] || {};
+                                             handleInputChange(field.id, { ...curFull, [row]: { ...curRow, [col.name]: e.target.value } });
+                                          }}
+                                          className="w-full text-xs px-2 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-500 bg-white"
+                                        >
+                                          <option value="">-- Choose --</option>
+                                          {(col.options || []).map((opt, oIdx) => (
+                                            <option key={oIdx} value={opt}>{opt}</option>
+                                          ))}
+                                          <option value="__other__">Other</option>
+                                        </select>
+                                        {(formData[field.id]?.[row]?.[col.name] === '__other__' || (formData[field.id]?.[row]?.[col.name] && !(col.options || []).includes(formData[field.id]?.[row]?.[col.name]))) && (
+                                          <input
+                                            type="text"
+                                            placeholder="Specify..."
+                                            value={formData[field.id]?.[row]?.[col.name] === '__other__' ? '' : formData[field.id]?.[row]?.[col.name]}
+                                            onChange={(e) => {
+                                               const curFull = formData[field.id] || {};
+                                               const curRow = curFull[row] || {};
+                                               handleInputChange(field.id, { ...curFull, [row]: { ...curRow, [col.name]: e.target.value } });
+                                            }}
+                                            className="w-full text-xs px-2 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-500"
+                                            autoFocus
+                                          />
+                                        )}
+                                      </div>
                                     ) : (
                                       <input 
                                         type="text"
@@ -1158,14 +1203,13 @@ export default function FormSubmissionForm({
                     )}
 
                     {field.allowRemarks && (
-                      <div className="mt-2 text-sm text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                         <label className="block text-xs font-semibold mb-1 text-slate-600">Remarks / Additional Info</label>
+                      <div className="mt-3">
                          <input 
                            type="text" 
                            value={formData[`${field.id}_remarks`] || ''}
                            onChange={(e) => handleInputChange(`${field.id}_remarks`, e.target.value)}
-                           className="w-full text-sm px-3 py-1.5 bg-white rounded border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                           placeholder="Type remarks here..."
+                           className="w-full text-[13px] px-2 py-1.5 border-b border-dashed border-slate-300 bg-transparent focus:border-slate-500 outline-none text-slate-600 placeholder:text-slate-400 transition-colors"
+                           placeholder="Additional remarks (optional)..."
                          />
                       </div>
                     )}
