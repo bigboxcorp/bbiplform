@@ -76,6 +76,33 @@ function getMicrosoftCredentials() {
   };
 }
 
+async function getAppOnlyToken() {
+  const { clientId, clientSecret } = getMicrosoftCredentials();
+  const tenantId = process.env.MICROSOFT_TENANT_ID;
+  if (!tenantId) return null;
+
+  try {
+    const params = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: "https://graph.microsoft.com/.default",
+      grant_type: "client_credentials",
+    });
+    const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.access_token;
+    }
+  } catch (err) {
+    console.error("Failed to get app-only token:", err);
+  }
+  return null;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -837,12 +864,20 @@ async function startServer() {
         };
       }
 
+      const graphApiEndpoint = fromAddress 
+        ? `https://graph.microsoft.com/v1.0/users/${fromAddress}/sendMail`
+        : "https://graph.microsoft.com/v1.0/me/sendMail";
+
+      // Use App-Only token if available (to bypass Send.As permission issues)
+      const appOnlyToken = await getAppOnlyToken();
+      const accessTokenToUse = appOnlyToken || creatorTokens.accessToken;
+
       const sendResponse = await fetch(
-        "https://graph.microsoft.com/v1.0/me/sendMail",
+        graphApiEndpoint,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${creatorTokens.accessToken}`,
+            Authorization: `Bearer ${accessTokenToUse}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(emailMessage),

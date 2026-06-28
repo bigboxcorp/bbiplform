@@ -40,9 +40,18 @@ export default function ResponsesViewer({ formId }: { formId: string }) {
           if (lCol.includes('date') || lCol.includes('time') || lCol.includes('at') || lCol.includes('submit')) {
               // Convert Excel serial date to JS Date
               // Excel epoch is Jan 1 1900. 1 = 1/1/1900
-              const jsDate = new Date((val - 25569) * 86400 * 1000);
-              if (!isNaN(jsDate.getTime())) {
-                  return jsDate.toLocaleString();
+              // The serial date represents local time. If we just multiply by 86400000 we get UTC time.
+              // We need to shift it by the browser's timezone offset to display it correctly using local methods.
+              const excelDays = val - 25569;
+              const jsTimeUtc = excelDays * 86400 * 1000;
+              const dateObj = new Date(jsTimeUtc);
+              if (!isNaN(dateObj.getTime())) {
+                  // The dateObj represents the time in UTC. 
+                  // We need to format the UTC parts as if they were local.
+                  // Or shift the JS Date by its local timezone offset.
+                  const offset = dateObj.getTimezoneOffset() * 60000;
+                  const localDateObj = new Date(jsTimeUtc + offset);
+                  return localDateObj.toLocaleString();
               }
           }
       }
