@@ -15,9 +15,6 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   requireTLS: true, // Force TLS for Microsoft Office 365
-  tls: {
-    ciphers: 'SSLv3'
-  },
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
