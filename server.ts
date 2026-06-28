@@ -666,25 +666,85 @@ async function startServer() {
       const formId = req.params.id;
       const { emails, formTitle, submissionId } = req.body;
       
-      if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-         return res.status(500).json({ error: 'SMTP credentials not configured on the server.' });
-      }
-
       if (!emails || !emails.length) {
          return res.json({ success: false, message: 'No emails provided' });
       }
 
-      const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
-        to: emails.join(', '),
-        subject: `New Submission: ${formTitle}`,
-        html: `<p>A new submission has been received for your form <b>${formTitle}</b>.</p><p><b>Submission ID:</b> ${submissionId}</p><p>Please check your connected Microsoft Excel spreadsheet to view the details.</p>`
+      // Fetch the form to get creatorTokens
+      const row = db.prepare(`SELECT * FROM forms WHERE id = ?`).get(formId) as any;
+      if (!row) {
+         return res.status(404).json({ error: 'Form not found' });
+      }
+
+      if (!row.creatorTokens) {
+         return res.status(400).json({ error: 'Form creator has not connected their Microsoft account' });
+      }
+
+      let creatorTokens = JSON.parse(row.creatorTokens);
+
+      // We might need to refresh the token if it's expired
+      if (creatorTokens.expiresAt && Date.now() > creatorTokens.expiresAt) {
+          try {
+            const tokenResponse = await fetch(`https://login.microsoftonline.com/common/oauth2/v2.0/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    client_id: process.env.MICROSOFT_CLIENT_ID!,
+                    client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+                    refresh_token: creatorTokens.refreshToken,
+                    grant_type: 'refresh_token'
+                })
+            });
+
+            const tokens = await tokenResponse.json();
+            if (tokens.access_token) {
+                creatorTokens = {
+                    accessToken: tokens.access_token,
+                    refreshToken: tokens.refresh_token || creatorTokens.refreshToken,
+                    expiresAt: Date.now() + tokens.expires_in * 1000
+                };
+                
+                db.prepare(`UPDATE forms SET creatorTokens = ? WHERE id = ?`)
+                  .run(JSON.stringify(creatorTokens), formId);
+            }
+          } catch (err) {
+              console.error('Failed to refresh token for notification:', err);
+              // Proceed anyway, maybe it will work
+          }
+      }
+
+      const emailMessage = {
+          message: {
+              subject: `New Submission: ${formTitle}`,
+              body: {
+                  contentType: "HTML",
+                  content: `<p>A new submission has been received for your form <b>${formTitle}</b>.</p><p><b>Submission ID:</b> ${submissionId}</p><p>Please check your connected Microsoft Excel spreadsheet to view the details.</p>`
+              },
+              toRecipients: emails.map((email: string) => ({
+                  emailAddress: { address: email }
+              }))
+          },
+          saveToSentItems: "true"
       };
 
-      await transporter.sendMail(mailOptions);
-      res.json({ success: true });
+      const sendResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+          method: 'POST',
+          headers: {
+              'Authorization': `Bearer ${creatorTokens.accessToken}`,
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(emailMessage)
+      });
+
+      if (!sendResponse.ok) {
+          const errorData = await sendResponse.json();
+          console.error('Graph API sendMail error:', errorData);
+          return res.status(sendResponse.status).json({ error: 'Failed to send email via Microsoft Graph', details: errorData });
+      }
+
+      res.json({ success: true, message: 'Email sent successfully via Graph API!' });
     } catch(err: any) {
-      console.error('Failed to send SMTP email:', err);
+      console.error('Failed to send notification email:', err);
       res.status(500).json({ error: err.message });
     }
   });
