@@ -523,7 +523,7 @@ export default function FormSubmissionForm({
                   return val || 'Unknown User';
               }
               const userVal = finalFormData[fId];
-              return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
+              return formatFieldValue(userVal);
             }
 
             if (colNameClean.includes('submission id') || colNameClean === 'id') return submissionId;
