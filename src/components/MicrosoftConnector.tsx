@@ -1514,6 +1514,24 @@ export default function MicrosoftConnector({
                <span className="text-[9px] text-slate-400 block mt-1">Sends an email via the server's SMTP configuration on new response. Separate multiple with commas.</span>
             </div>
 
+            {/* Public Responses View Settings */}
+            <div className="pb-3 mb-3 border-b border-slate-200">
+               <label className="text-[10px] font-bold text-slate-700 uppercase block mb-2">Public Responses View Settings</label>
+               <div className="flex flex-col sm:flex-row gap-4">
+                 <div className="flex-1">
+                   <span className="text-[10px] text-slate-500 block mb-1">Limit Number of Responses Shown (0 or empty for all)</span>
+                   <input type="number" min="0" placeholder="e.g. 10" value={formConfig.settings?.responsesViewLimit ?? ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, responsesViewLimit: e.target.value ? parseInt(e.target.value, 10) : undefined }})} className="w-full p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />
+                 </div>
+                 <div className="flex-1">
+                   <span className="text-[10px] text-slate-500 block mb-1">Sort Order</span>
+                   <select value={formConfig.settings?.responsesViewOrder || 'newest'} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, responsesViewOrder: e.target.value as any }})} className="w-full p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none">
+                     <option value="newest">Newest First (Top to Bottom)</option>
+                     <option value="oldest">Oldest First (Top to Bottom)</option>
+                   </select>
+                 </div>
+               </div>
+            </div>
+
             <div className="pt-1">
                <label className="text-xs font-bold text-slate-800 block mb-2">Daily Time Constraints (Local Time)</label>
                <span className="text-[10px] text-slate-500 block mb-3">If configured, the form will only be available during these daily time slots. You can set up to 3 slots.</span>

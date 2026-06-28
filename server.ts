@@ -1007,11 +1007,24 @@ async function startServer() {
         colsPayload = await colsRes.json();
       }
 
+      let dataList = payload.value.map((v: any) => v.values[0]);
+
+      const limit = formConfig.settings?.responsesViewLimit;
+      const order = formConfig.settings?.responsesViewOrder || 'newest';
+
+      if (order === 'newest') {
+        dataList.reverse();
+      }
+
+      if (limit && limit > 0) {
+        dataList = dataList.slice(0, limit);
+      }
+
       res.json({
         title: formConfig.title,
         themeColor: formConfig.settings?.themeColor || "#2563eb",
-        columns: colsPayload.value.map((c) => c.name),
-        data: payload.value.map((v) => v.values[0]),
+        columns: colsPayload.value.map((c: any) => c.name),
+        data: dataList,
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

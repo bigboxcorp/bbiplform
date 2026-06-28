@@ -71,6 +71,9 @@ export interface FormSettings {
   submissionPrefix?: string;
   submissionStartNumber?: number;
   showProgressBar?: boolean;
+  notificationEmails?: string;
+  responsesViewLimit?: number;
+  responsesViewOrder?: 'newest' | 'oldest';
 }
 
 export interface FormConfig {
