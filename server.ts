@@ -857,27 +857,12 @@ async function startServer() {
         saveToSentItems: "true",
       };
 
-      const fromAddress = process.env.MICROSOFT_FROM_ADDRESS || process.env.SMTP_FROM;
-      if (fromAddress) {
-        emailMessage.message.from = {
-          emailAddress: { address: fromAddress },
-        };
-      }
-
-      const graphApiEndpoint = fromAddress 
-        ? `https://graph.microsoft.com/v1.0/users/${fromAddress}/sendMail`
-        : "https://graph.microsoft.com/v1.0/me/sendMail";
-
-      // Use App-Only token if available (to bypass Send.As permission issues)
-      const appOnlyToken = await getAppOnlyToken();
-      const accessTokenToUse = appOnlyToken || creatorTokens.accessToken;
-
       const sendResponse = await fetch(
-        graphApiEndpoint,
+        "https://graph.microsoft.com/v1.0/me/sendMail",
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessTokenToUse}`,
+            Authorization: `Bearer ${creatorTokens.accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(emailMessage),
