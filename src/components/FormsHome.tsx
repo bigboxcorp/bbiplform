@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2, Copy, Users } from 'lucide-react';
+import { FileText, Plus, ExternalLink, Settings, Clock, CheckCircle, Trash2, Copy, Users, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { FormConfig, ExcelSaveConfig } from '../types';
 
 interface SavedForm {
@@ -13,6 +14,7 @@ interface SavedForm {
 export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: string | null, config: FormConfig, excelConfig: ExcelSaveConfig | null) => void, userEmail?: string | null }) {
   const [forms, setForms] = useState<SavedForm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [qrModalUrl, setQrModalUrl] = useState<string | null>(null);
 
   const fetchForms = () => {
     setLoading(true);
@@ -181,10 +183,40 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
                    >
                      <ExternalLink size={14} />
                    </a>
+                   <button
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       setQrModalUrl(`${safeOrigin}/form/${form.id}`);
+                     }}
+                     className="p-1.5 text-slate-400 hover:text-purple-600 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
+                     title="Show QR Code"
+                   >
+                     <QrCode size={14} />
+                   </button>
                  </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {qrModalUrl && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setQrModalUrl(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Scan QR Code</h3>
+              <div className="bg-white p-4 rounded-xl border-2 border-slate-100 inline-block">
+                <QRCodeSVG value={qrModalUrl} size={200} />
+              </div>
+              <p className="text-sm text-slate-500 mt-4 mb-6">Scan this code to quickly open the form on a mobile device.</p>
+              <button 
+                onClick={() => setQrModalUrl(null)}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

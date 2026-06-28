@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   FileText,
   Lock,
-  Unlock
+  Unlock,
+  QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function App() {
   const path = window.location.pathname;
@@ -60,6 +62,7 @@ export default function App() {
   const [appUrl, setAppUrl] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
+  const [qrModalUrl, setQrModalUrl] = useState<string | null>(null);
   
   // A. Form Fields configuration
   const [formConfig, setFormConfig] = useState<FormConfig>({
@@ -470,6 +473,9 @@ export default function App() {
                    <button onClick={() => { navigator.clipboard.writeText(publishedUrl); alert('Link copied!'); }} className="bg-emerald-100 hover:bg-emerald-200 px-3 text-emerald-800 transition-colors flex items-center justify-center shrink-0 border-l border-emerald-200 cursor-pointer" title="Copy">
                      <Copy size={13} />
                    </button>
+                   <button onClick={() => setQrModalUrl(publishedUrl)} className="bg-emerald-100 hover:bg-emerald-200 px-3 text-emerald-800 transition-colors flex items-center justify-center shrink-0 border-l border-emerald-200 cursor-pointer" title="Show QR Code">
+                     <QrCode size={13} />
+                   </button>
                    <a href={publishedUrl} target="_blank" rel="noopener noreferrer" className="bg-emerald-100 hover:bg-emerald-200 px-3 text-emerald-800 transition-colors flex items-center justify-center shrink-0 border-l border-emerald-200 cursor-pointer" title="Open Link">
                      <ExternalLink size={13} />
                    </a>
@@ -547,6 +553,26 @@ export default function App() {
         </aside>
       )}
       </main>
+
+      {qrModalUrl && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setQrModalUrl(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 text-center">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Scan QR Code</h3>
+              <div className="bg-white p-4 rounded-xl border-2 border-slate-100 inline-block">
+                <QRCodeSVG value={qrModalUrl} size={200} />
+              </div>
+              <p className="text-sm text-slate-500 mt-4 mb-6">Scan this code to quickly open the form on a mobile device.</p>
+              <button 
+                onClick={() => setQrModalUrl(null)}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
