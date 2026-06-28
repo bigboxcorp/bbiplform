@@ -191,22 +191,17 @@ export default function FormSubmissionForm({
         }
         if (field.type === 'grid_input' && field.required && field.gridRows?.length && field.gridInputCols?.length) {
             const valObj = val || {};
-            let hasAtLeastOneCompleteRow = false;
-            for (const row of field.gridRows) {
-               const rowAnswers = valObj[row] || {};
-               let hasAllInRow = true;
-               for (const col of field.gridInputCols) {
-                  if (!rowAnswers[col.name] || rowAnswers[col.name] === '__other__') {
-                      hasAllInRow = false; break;
-                  }
-               }
-               if (hasAllInRow) {
-                  hasAtLeastOneCompleteRow = true;
-                  break;
+            const firstRow = field.gridRows[0];
+            const firstRowAnswers = valObj[firstRow] || {};
+            let isFirstRowComplete = true;
+            for (const col of field.gridInputCols) {
+               if (!firstRowAnswers[col.name] || (typeof firstRowAnswers[col.name] === 'string' && firstRowAnswers[col.name].trim() === '') || firstRowAnswers[col.name] === '__other__') {
+                   isFirstRowComplete = false;
+                   break;
                }
             }
-            if (!hasAtLeastOneCompleteRow) {
-                errors[field.id] = `Please fill all required inputs for at least one item.`;
+            if (!isFirstRowComplete) {
+                errors[field.id] = `Please complete the first row (${firstRow}).`;
             }
         }
         if (field.type === 'file' && field.fileOptions && Array.isArray(val)) {
