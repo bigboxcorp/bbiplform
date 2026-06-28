@@ -41,8 +41,6 @@ export default function FormSubmissionForm({
 }: FormSubmissionFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [recordEmailChecked, setRecordEmailChecked] = useState<boolean>(true);
-  const [manualEmail, setManualEmail] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -150,22 +148,7 @@ export default function FormSubmissionForm({
 
     // Client-Side Validation for Current Page ONLY
     const errors: Record<string, string> = {};
-    if (currentPage === 0 && formConfig.settings?.collectEmails && !userEmail && recordEmailChecked) {
-      if (!manualEmail.trim()) {
-        errors['_manual_email'] = 'Email address is required.';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manualEmail)) {
-        errors['_manual_email'] = 'Valid email address is required.';
-      } else if (formConfig.settings.allowedDomains) {
-          const allowedStr = formConfig.settings.allowedDomains;
-          if (allowedStr.trim()) {
-              const allowedDomains = allowedStr.split(',').map((s: string) => s.trim().toLowerCase());
-              const domain = manualEmail.trim().split('@')[1]?.toLowerCase();
-              if (domain && !allowedDomains.includes(domain)) {
-                  errors['_manual_email'] = `Only email addresses from these domains are allowed: ${allowedDomains.join(', ')}`;
-              }
-          }
-      }
-    }
+
     fieldsToRender.forEach(field => {
       if (field.type === 'section_break') return;
       const val = formData[field.id];
@@ -386,11 +369,9 @@ export default function FormSubmissionForm({
       }
 
       if (publicMode && formId && saveConfig) {
-        let respondentEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '';
-        if (formConfig.settings?.collectEmails && !userEmail) {
-           respondentEmail = manualEmail.trim();
-        } else if (!recordEmailChecked) {
-           respondentEmail = ''; // don't record if unchecked
+        let respondentEmail = '';
+        if (formConfig.settings?.collectEmails) {
+           respondentEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User';
         }
         // PUBLIC SUBMISSION VIA GRAPH PROXY
         let driveId = saveConfig.driveId;
@@ -508,8 +489,8 @@ export default function FormSubmissionForm({
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
               if (fId === 'respondent_email') {
-                  const checkVal = formConfig.settings?.collectEmails && !userEmail ? manualEmail.trim() : (recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '');
-                  return checkVal || 'Anonymous';
+                  const checkVal = formConfig.settings?.collectEmails ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
+                  return checkVal || 'Unknown User';
               }
               const userVal = finalFormData[fId];
               return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
@@ -519,8 +500,8 @@ export default function FormSubmissionForm({
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
             
             if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               const checkVal = formConfig.settings?.collectEmails && !userEmail ? manualEmail.trim() : (recordEmailChecked ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '');
-               return checkVal || 'Admin / Owner';
+               const checkVal = formConfig.settings?.collectEmails ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
+               return checkVal || 'Unknown User';
             }
 
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
@@ -810,8 +791,6 @@ export default function FormSubmissionForm({
                   setFormData({});
                   setPageHistory([]);
                   setValidationErrors({});
-                  setManualEmail('');
-                  setRecordEmailChecked(true);
                   setFormResetKey(prev => prev + 1);
                   setTimeout(() => {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -827,49 +806,8 @@ export default function FormSubmissionForm({
         ) : (
           <form key={formResetKey} id="form-top" onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
             {formConfig.settings?.collectEmails && (
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-3">
-                {userEmail ? (
-                  <div className="flex items-start gap-2 text-xs">
-                    <input 
-                      type="checkbox" 
-                      checked={recordEmailChecked}
-                      onChange={(e) => setRecordEmailChecked(e.target.checked)}
-                      id="record-email-check"
-                      className="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                    />
-                    <label htmlFor="record-email-check" className="text-slate-600 font-medium cursor-pointer">
-                      Record my email address (<span className="font-bold text-slate-800">{userEmail}</span>) with this submission.
-                    </label>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-slate-700 flex flex-col gap-0.5 select-none">
-                      <span>Email Address <span className="text-red-500">*</span></span>
-                      {formConfig.settings?.allowedDomains && formConfig.settings.allowedDomains.trim() && (
-                          <span className="text-xs text-slate-500 font-normal">
-                             Accepted domains: {formConfig.settings.allowedDomains.split(',').map(d => d.trim()).join(', ')}
-                          </span>
-                      )}
-                    </label>
-                    <input 
-                      type="email"
-                      value={manualEmail}
-                      onChange={(e) => {
-                         setManualEmail(e.target.value);
-                         if (validationErrors['_manual_email']) {
-                            setValidationErrors(prev => { const c = {...prev}; delete c['_manual_email']; return c; });
-                         }
-                      }}
-                      placeholder="Enter your email address"
-                      className={`w-full text-sm px-4 py-2.5 bg-white rounded-lg border focus:outline-none focus:ring-2 transition-all font-medium text-slate-800 ${
-                        validationErrors['_manual_email'] ? 'border-red-350 focus:ring-red-500 bg-red-50/20' : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                    />
-                    {validationErrors['_manual_email'] && (
-                      <span className="text-[11px] font-bold text-red-500 block animate-fadeIn pl-1 pt-1">{validationErrors['_manual_email']}</span>
-                    )}
-                  </div>
-                )}
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-3 text-xs text-slate-600 font-medium">
+                Your email address (<span className="font-bold text-slate-800">{userEmail || 'Unknown User'}</span>) will be recorded with this submission.
               </div>
             )}
             {submitStatus === 'error' && (
