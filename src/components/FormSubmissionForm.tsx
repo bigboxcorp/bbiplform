@@ -149,6 +149,17 @@ export default function FormSubmissionForm({
     // Client-Side Validation for Current Page ONLY
     const errors: Record<string, string> = {};
 
+    if (formConfig.settings?.collectEmails && currentPage === 0) {
+       const emailInput = formData['respondent_email'] !== undefined ? formData['respondent_email'] : (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '');
+       const loggedInEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email');
+       
+       if (!emailInput || (typeof emailInput === 'string' && emailInput.trim() === '')) {
+           errors['respondent_email'] = 'Email is required.';
+       } else if (loggedInEmail && loggedInEmail.includes('@') && typeof emailInput === 'string' && emailInput.trim().toLowerCase() !== loggedInEmail.toLowerCase()) {
+           errors['respondent_email'] = 'Please enter the email address you are signed in with.';
+       }
+    }
+
     fieldsToRender.forEach(field => {
       if (field.type === 'section_break') return;
       const val = formData[field.id];
@@ -407,8 +418,8 @@ export default function FormSubmissionForm({
           rowData = tableColumns.map((col: any) => {
             const colNameClean = (col.name || '').trim().toLowerCase();
 
-            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping || saveConfig.fieldMapping || {}).find(
-              ([fId, excelColName]) => excelColName.trim().toLowerCase() === colNameClean
+            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping || (saveConfig as any).fieldMapping || {}).find(
+              ([fId, excelColName]) => (excelColName as string).trim().toLowerCase() === colNameClean
             );
 
             if (mappedFieldEntry) {
@@ -499,8 +510,8 @@ export default function FormSubmissionForm({
           rowData = tableColumns.map((col: any) => {
             const colNameClean = (col.name || '').trim().toLowerCase();
 
-            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping || saveConfig.fieldMapping || {}).find(
-              ([fId, excelColName]) => excelColName.trim().toLowerCase() === colNameClean
+            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping || (saveConfig as any).fieldMapping || {}).find(
+              ([fId, excelColName]) => (excelColName as string).trim().toLowerCase() === colNameClean
             );
 
             if (mappedFieldEntry) {
@@ -830,15 +841,25 @@ export default function FormSubmissionForm({
           <form key={formResetKey} id="form-top" onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
             {formConfig.settings?.collectEmails && currentPage === 0 && (
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-2 text-xs text-slate-600 font-medium">
+                 {(userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) && (
+                    <div className="text-sm font-medium text-slate-700 mb-1">
+                      Signed in as <span className="font-bold text-slate-900">{userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')}</span>
+                    </div>
+                 )}
                  <label className="font-bold text-slate-700 text-sm">Submitter Email <span className="text-rose-500">*</span></label>
                  <input 
                    type="email"
                    required
                    value={formData['respondent_email'] !== undefined ? formData['respondent_email'] : (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '')}
                    onChange={(e) => handleInputChange('respondent_email', e.target.value)}
-                   className="w-full p-2.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-[13px] text-slate-800"
+                   className={`w-full p-2.5 border rounded-lg bg-white focus:ring-2 focus:outline-none text-[13px] text-slate-800 ${
+                     validationErrors['respondent_email'] ? 'border-red-350 focus:ring-red-500 bg-red-50/20' : 'border-slate-300 focus:ring-blue-500 focus:border-blue-500'
+                   }`}
                    placeholder="Enter your email"
                  />
+                 {validationErrors['respondent_email'] && (
+                    <span className="text-red-500 text-xs mt-0.5">{validationErrors['respondent_email']}</span>
+                 )}
                  <span className="text-slate-500 text-[11px] mt-1">This email will be recorded with your submission.</span>
               </div>
             )}
