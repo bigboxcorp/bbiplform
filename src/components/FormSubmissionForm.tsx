@@ -828,7 +828,7 @@ export default function FormSubmissionForm({
           </div>
         ) : (
           <form key={formResetKey} id="form-top" onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
-            {formConfig.settings?.collectEmails && (
+            {formConfig.settings?.collectEmails && currentPage === 0 && (
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-2 text-xs text-slate-600 font-medium">
                  <label className="font-bold text-slate-700 text-sm">Submitter Email <span className="text-rose-500">*</span></label>
                  <input 
