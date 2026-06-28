@@ -132,7 +132,8 @@ export default function PublicForm({ formId }: { formId: string }) {
   }, [formId]);
 
   const needsLogin = formData?.config?.settings?.requireMicrosoftLogin || 
-                     formData?.config?.settings?.allowMultipleSubmissions === false;
+                     formData?.config?.settings?.allowMultipleSubmissions === false ||
+                     formData?.config?.settings?.collectEmails;
 
   useEffect(() => {
      if (respondentTokens && !validProfileChecked) {

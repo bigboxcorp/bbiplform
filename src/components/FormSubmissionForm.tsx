@@ -435,9 +435,12 @@ export default function FormSubmissionForm({
           });
           rowData = [
             submissionId,
-            currentTimestampFormatted,
-            ...flatValues
+            currentTimestampFormatted
           ];
+          if (formConfig.settings?.collectEmails) {
+             rowData.push(respondentEmail);
+          }
+          rowData.push(...flatValues);
         }
 
         const endpointAddRow = `drives/${driveId}/items/${fileItemId}/workbook/tables/${tableName}/rows`;
@@ -523,9 +526,12 @@ export default function FormSubmissionForm({
           });
           rowData = [
             submissionId,
-            currentTimestampFormatted,
-            ...flatValues
+            currentTimestampFormatted
           ];
+          if (formConfig.settings?.collectEmails) {
+             rowData.push(userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User');
+          }
+          rowData.push(...flatValues);
         }
 
         await addRowToTable(driveId, fileItemId, tableName, [rowData], tokens, setTokens);
@@ -807,7 +813,7 @@ export default function FormSubmissionForm({
           <form key={formResetKey} id="form-top" onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
             {formConfig.settings?.collectEmails && (
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-3 text-xs text-slate-600 font-medium">
-                Your email address (<span className="font-bold text-slate-800">{userEmail || 'Unknown User'}</span>) will be recorded with this submission.
+                Your email address (<span className="font-bold text-slate-800">{userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User'}</span>) will be recorded with this submission.
               </div>
             )}
             {submitStatus === 'error' && (
