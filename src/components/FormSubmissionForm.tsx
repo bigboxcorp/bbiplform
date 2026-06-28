@@ -167,7 +167,7 @@ export default function FormSubmissionForm({
       
       if (field.required && isEmpty && field.type !== 'grid_radio' && field.type !== 'grid_checkbox' && field.type !== 'grid_input') {
         errors[field.id] = `${field.label} is required.`;
-      } else if (!isEmpty) {
+      } else if (!isEmpty || field.type === 'grid_radio' || field.type === 'grid_checkbox' || field.type === 'grid_input') {
         if (val === '__other__') {
             errors[field.id] = `Please specify a value.`;
         }
@@ -187,6 +187,13 @@ export default function FormSubmissionForm({
             const keys = Object.keys(val || {});
             if (keys.length < field.gridRows.length) {
                 errors[field.id] = `Please answer all rows.`;
+            }
+        }
+        if (field.type === 'grid_checkbox' && field.required && field.gridRows?.length) {
+            const valObj = val || {};
+            const hasAnySelection = Object.values(valObj).some((arr: any) => Array.isArray(arr) && arr.length > 0);
+            if (!hasAnySelection) {
+                errors[field.id] = `Please make at least one selection.`;
             }
         }
         if (field.type === 'grid_input' && field.required && field.gridRows?.length && field.gridInputCols?.length) {
