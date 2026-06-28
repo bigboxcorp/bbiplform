@@ -11,14 +11,26 @@ dotenv.config();
 
 // Setup SMTP Transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  host: process.env.SMTP_HOST || 'smtp.office365.com',
   port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+  requireTLS: true, // Force TLS for Microsoft Office 365
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
+
+// Verify SMTP connection
+if (process.env.SMTP_USER) {
+  transporter.verify(function (error, success) {
+    if (error) {
+      console.error('SMTP Connection Error:', error);
+    } else {
+      console.log('SMTP Server is ready to take our messages');
+    }
+  });
+}
 
 // Initialize SQLite database
 const db = new Database('data.db', { verbose: console.log });
