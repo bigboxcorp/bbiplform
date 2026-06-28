@@ -403,7 +403,11 @@ async function startServer() {
       console.log(`[GRAPH CALL] ${req.method} ${graphUrl}`);
       console.log(`[GRAPH HEADERS]`, headers);
       if (fetchOptions.body) {
-        console.log(`[GRAPH BODY LENGTH]`, fetchOptions.body.toString().length);
+        const bodyStr = fetchOptions.body.toString();
+        require('fs').appendFileSync('logs.txt', `\n[AUTH GRAPH CALL BODY LENGTH] ${bodyStr.length}\n`);
+        if (bodyStr.length < 2000) {
+            require('fs').appendFileSync('logs.txt', `[AUTH GRAPH CALL BODY] ${bodyStr}\n`);
+        }
       }
 
       const graphRes = await fetch(graphUrl, fetchOptions);
@@ -1081,6 +1085,14 @@ async function startServer() {
           delete (fetchOptions.headers as Record<string, string>)[
             "Content-Type"
           ];
+        }
+
+        if (fetchOptions.body) {
+          const bodyStr = fetchOptions.body.toString();
+          require('fs').appendFileSync('logs.txt', `\n[PUBLIC GRAPH CALL BODY LENGTH] ${bodyStr.length}\n`);
+          if (bodyStr.length < 2000) {
+              require('fs').appendFileSync('logs.txt', `[PUBLIC GRAPH CALL BODY] ${bodyStr}\n`);
+          }
         }
 
         console.log(`[PUBLIC GRAPH CALL] ${req.method} ${graphUrl}`);

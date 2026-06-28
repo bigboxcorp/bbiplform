@@ -306,8 +306,13 @@ export default function FormSubmissionForm({
       status: 'pending'
     };
 
-    try {
+      try {
       const finalFormData = { ...formData };
+      
+      const computedEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email');
+      if (formConfig.settings?.collectEmails && computedEmail) {
+          finalFormData['respondent_email'] = computedEmail;
+      }
       
       // Upload files immediately if we have access to graph
       for (const field of formConfig.fields) {
@@ -408,8 +413,8 @@ export default function FormSubmissionForm({
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
               if (fId === 'respondent_email') {
-                  const checkVal = formConfig.settings?.collectEmails ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
-                  return checkVal || 'Unknown User';
+                  const val = finalFormData['respondent_email'] || (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email'));
+                  return val || 'Unknown User';
               }
               const userVal = finalFormData[fId];
               return formatFieldValue(userVal);
@@ -417,16 +422,18 @@ export default function FormSubmissionForm({
 
             if (colNameClean.includes('submission id') || colNameClean === 'id') return submissionId;
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
-            if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               const checkVal = formConfig.settings?.collectEmails ? (respondentEmail || userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
-               return checkVal || 'Unknown User';
-            }
-
+            
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
             if (matchedField) {
               const val = finalFormData[matchedField.id];
               return formatFieldValue(val);
             }
+
+            if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
+               const checkVal = finalFormData['respondent_email'] || userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email');
+               return checkVal || 'Unknown User';
+            }
+
             return ''; 
           });
         } else {
@@ -444,7 +451,7 @@ export default function FormSubmissionForm({
             currentTimestampFormatted
           ];
           if (formConfig.settings?.collectEmails) {
-             rowData.push(userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User');
+             rowData.push(finalFormData['respondent_email'] || 'Unknown User');
           }
           rowData.push(...flatValues);
         }
@@ -498,8 +505,8 @@ export default function FormSubmissionForm({
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
               if (fId === 'respondent_email') {
-                  const checkVal = formConfig.settings?.collectEmails ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
-                  return checkVal || 'Unknown User';
+                  const val = finalFormData['respondent_email'] || (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email'));
+                  return val || 'Unknown User';
               }
               const userVal = finalFormData[fId];
               return userVal !== undefined ? (Array.isArray(userVal) ? userVal.join(', ') : userVal) : '';
@@ -508,16 +515,17 @@ export default function FormSubmissionForm({
             if (colNameClean.includes('submission id') || colNameClean === 'id') return submissionId;
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
             
-            if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               const checkVal = formConfig.settings?.collectEmails ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
-               return checkVal || 'Unknown User';
-            }
-
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
             if (matchedField) {
               const val = finalFormData[matchedField.id];
               return formatFieldValue(val);
             }
+
+            if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
+               const checkVal = finalFormData['respondent_email'] || userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email');
+               return checkVal || 'Unknown User';
+            }
+
             return ''; 
           });
         } else {
@@ -535,7 +543,7 @@ export default function FormSubmissionForm({
             currentTimestampFormatted
           ];
           if (formConfig.settings?.collectEmails) {
-             rowData.push(userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User');
+             rowData.push(finalFormData['respondent_email'] || 'Unknown User');
           }
           rowData.push(...flatValues);
         }
