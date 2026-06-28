@@ -414,7 +414,9 @@ export default function FormSubmissionForm({
 
             if (colNameClean.includes('submission id') || colNameClean === 'id') return submissionId;
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
-            if (respondentEmail && (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent'))) return respondentEmail;
+            if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
+               return respondentEmail || userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User';
+            }
 
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
             if (matchedField) {

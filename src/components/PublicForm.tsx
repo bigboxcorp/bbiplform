@@ -138,7 +138,14 @@ export default function PublicForm({ formId }: { formId: string }) {
   useEffect(() => {
      if (respondentTokens && !validProfileChecked) {
          getProfile(respondentTokens, setRespondentTokens).then(async (profile) => {
-             const email = profile.userPrincipalName || profile.mail || '';
+             console.log("Graph API /me profile response:", profile);
+             let email = profile.userPrincipalName || profile.mail || '';
+             if (!email && profile.displayName) {
+                 email = profile.displayName + ' (No Email Provided)';
+             }
+             if (!email) {
+                 email = 'Authenticated User';
+             }
              (window as any).respondentEmail = email;
              setRespondentEmail(email);
              if (email) localStorage.setItem('microsoft_user_email', email);
