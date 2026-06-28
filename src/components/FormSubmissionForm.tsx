@@ -399,7 +399,7 @@ export default function FormSubmissionForm({
           rowData = tableColumns.map((col: any) => {
             const colNameClean = (col.name || '').trim().toLowerCase();
 
-            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping).find(
+            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping || saveConfig.fieldMapping || {}).find(
               ([fId, excelColName]) => excelColName.trim().toLowerCase() === colNameClean
             );
 
@@ -407,7 +407,10 @@ export default function FormSubmissionForm({
               const fId = mappedFieldEntry[0];
               if (fId === '__submission_id') return submissionId;
               if (fId === '__submitted_at') return currentTimestampFormatted;
-              if (fId === 'respondent_email') return respondentEmail || 'Anonymous';
+              if (fId === 'respondent_email') {
+                  const checkVal = formConfig.settings?.collectEmails ? (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
+                  return checkVal || 'Unknown User';
+              }
               const userVal = finalFormData[fId];
               return formatFieldValue(userVal);
             }
@@ -415,7 +418,8 @@ export default function FormSubmissionForm({
             if (colNameClean.includes('submission id') || colNameClean === 'id') return submissionId;
             if (colNameClean.includes('submitted at')) return currentTimestampFormatted;
             if (colNameClean.includes('email') || colNameClean.includes('submitted by') || colNameClean.includes('respondent')) {
-               return respondentEmail || userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User';
+               const checkVal = formConfig.settings?.collectEmails ? (respondentEmail || userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email')) : '';
+               return checkVal || 'Unknown User';
             }
 
             const matchedField = formConfig.fields.find(f => f.label.trim().toLowerCase() === colNameClean);
@@ -440,7 +444,7 @@ export default function FormSubmissionForm({
             currentTimestampFormatted
           ];
           if (formConfig.settings?.collectEmails) {
-             rowData.push(respondentEmail);
+             rowData.push(userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User');
           }
           rowData.push(...flatValues);
         }
@@ -485,7 +489,7 @@ export default function FormSubmissionForm({
           rowData = tableColumns.map((col: any) => {
             const colNameClean = (col.name || '').trim().toLowerCase();
 
-            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping).find(
+            const mappedFieldEntry = Object.entries(saveConfig.columnsMapping || saveConfig.fieldMapping || {}).find(
               ([fId, excelColName]) => excelColName.trim().toLowerCase() === colNameClean
             );
 
