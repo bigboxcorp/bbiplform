@@ -15,6 +15,9 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
   requireTLS: true, // Force TLS for Microsoft Office 365
+  tls: {
+    ciphers: 'SSLv3'
+  },
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -620,6 +623,44 @@ async function startServer() {
       res.json({ success: true });
     } catch(err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/test-email', async (req, res) => {
+    try {
+      if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        return res.status(400).json({ error: 'SMTP_USER and SMTP_PASS are not configured in the .env file.' });
+      }
+      
+      // Verify connection configuration
+      await new Promise((resolve, reject) => {
+        transporter.verify(function (error, success) {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(success);
+          }
+        });
+      });
+
+      // Send a test email
+      const mailOptions = {
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: process.env.SMTP_USER, // send to self
+        subject: `Test Email from Form Builder`,
+        html: `<p>This is a test email to verify your SMTP configuration is working.</p>`
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      res.json({ success: true, message: 'SMTP connection successful and test email sent!', info });
+    } catch(err: any) {
+      console.error('Test email failed:', err);
+      res.status(500).json({ 
+        error: 'Failed to connect to SMTP server or send email', 
+        details: err.message,
+        code: err.code,
+        command: err.command
+      });
     }
   });
 
