@@ -309,8 +309,11 @@ export default function FormSubmissionForm({
       try {
       const finalFormData = { ...formData };
       
-      const computedEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email');
-      if (formConfig.settings?.collectEmails && computedEmail) {
+      let computedEmail = formData['respondent_email'];
+      if (computedEmail === undefined) {
+         computedEmail = userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '';
+      }
+      if (formConfig.settings?.collectEmails) {
           finalFormData['respondent_email'] = computedEmail;
       }
       
@@ -582,7 +585,7 @@ export default function FormSubmissionForm({
       
       if (publicMode && formId && formConfig.settings?.allowMultipleSubmissions === false) {
           localStorage.setItem(`__form_submitted_${formId}`, 'true');
-          const email = (window as any).respondentEmail;
+          const email = finalFormData['respondent_email'] || (window as any).respondentEmail;
           if (email) {
              try {
                 await fetch(`/api/forms/${formId}/record-submission`, {
@@ -826,8 +829,17 @@ export default function FormSubmissionForm({
         ) : (
           <form key={formResetKey} id="form-top" onSubmit={handleNextOrSubmit} className="p-8 space-y-6">
             {formConfig.settings?.collectEmails && (
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-3 text-xs text-slate-600 font-medium">
-                Your email address (<span className="font-bold text-slate-800">{userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || 'Unknown User'}</span>) will be recorded with this submission.
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg flex flex-col gap-2 text-xs text-slate-600 font-medium">
+                 <label className="font-bold text-slate-700 text-sm">Submitter Email <span className="text-rose-500">*</span></label>
+                 <input 
+                   type="email"
+                   required
+                   value={formData['respondent_email'] !== undefined ? formData['respondent_email'] : (userEmail || (window as any).respondentEmail || localStorage.getItem('microsoft_user_email') || '')}
+                   onChange={(e) => handleInputChange('respondent_email', e.target.value)}
+                   className="w-full p-2.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-[13px] text-slate-800"
+                   placeholder="Enter your email"
+                 />
+                 <span className="text-slate-500 text-[11px] mt-1">This email will be recorded with your submission.</span>
               </div>
             )}
             {submitStatus === 'error' && (
