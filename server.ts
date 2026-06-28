@@ -4,9 +4,21 @@ import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
+import nodemailer from 'nodemailer';
 
 // Load environment variables from .env file
 dotenv.config();
+
+// Setup SMTP Transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
+  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 // Initialize SQLite database
 const db = new Database('data.db', { verbose: console.log });
@@ -104,7 +116,8 @@ async function startServer() {
       'Files.ReadWrite',
       'Files.ReadWrite.All',
       'Sites.ReadWrite.All',
-      'Group.ReadWrite.All'
+      'Group.ReadWrite.All',
+      'Mail.Send'
     ].join(' ');
 
     const params = new URLSearchParams({
@@ -594,6 +607,34 @@ async function startServer() {
       db.prepare(`INSERT INTO submissions_log (id, formId, userEmail) VALUES (?, ?, ?)`).run(uuidv4(), formId, email || 'anonymous');
       res.json({ success: true });
     } catch(err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/forms/:id/notify', async (req, res) => {
+    try {
+      const formId = req.params.id;
+      const { emails, formTitle, submissionId } = req.body;
+      
+      if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+         return res.status(500).json({ error: 'SMTP credentials not configured on the server.' });
+      }
+
+      if (!emails || !emails.length) {
+         return res.json({ success: false, message: 'No emails provided' });
+      }
+
+      const mailOptions = {
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: emails.join(', '),
+        subject: `New Submission: ${formTitle}`,
+        html: `<p>A new submission has been received for your form <b>${formTitle}</b>.</p><p><b>Submission ID:</b> ${submissionId}</p><p>Please check your connected Microsoft Excel spreadsheet to view the details.</p>`
+      };
+
+      await transporter.sendMail(mailOptions);
+      res.json({ success: true });
+    } catch(err: any) {
+      console.error('Failed to send SMTP email:', err);
       res.status(500).json({ error: err.message });
     }
   });

@@ -557,6 +557,27 @@ export default function FormSubmissionForm({
 
       if (setSubmissions) setSubmissions(prev => [newSubmission, ...prev]);
       setSubmitStatus('success');
+
+      // Check if we need to send an email notification using SMTP server
+      if (formConfig.settings?.notificationEmails) {
+        try {
+          const emailList = formConfig.settings.notificationEmails.split(',').map(e => e.trim()).filter(e => e.length > 0);
+          if (emailList.length > 0) {
+            await fetch(`/api/forms/${formId || 'test'}/notify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                emails: emailList,
+                formTitle: formConfig.title || 'Untitled Form',
+                submissionId: submissionId
+              })
+            });
+          }
+        } catch (emailErr) {
+          console.error("Failed to send notification email via SMTP:", emailErr);
+          // Do not fail the form submission just because the notification email failed
+        }
+      }
       
       if (publicMode && formId && formConfig.settings?.allowMultipleSubmissions === false) {
           localStorage.setItem(`__form_submitted_${formId}`, 'true');

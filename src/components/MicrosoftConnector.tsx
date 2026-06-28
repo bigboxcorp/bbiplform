@@ -1499,7 +1499,7 @@ export default function MicrosoftConnector({
             </label>
 
             {/* Allow Multiple Submissions */}
-            <label className="flex items-start gap-3 cursor-pointer group">
+            <label className="flex items-start gap-3 cursor-pointer group mb-2 border-b border-slate-200 pb-3">
               <input type="checkbox" checked={formConfig.settings?.allowMultipleSubmissions !== false} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, allowMultipleSubmissions: e.target.checked }})} className="mt-0.5" />
               <div>
                  <span className="text-xs font-bold text-slate-800 block group-hover:text-blue-600">Allow Multiple Responses (Per User)</span>
@@ -1507,7 +1507,14 @@ export default function MicrosoftConnector({
               </div>
             </label>
 
-            <div className="pt-3 border-t border-slate-200">
+            {/* Notification Emails */}
+            <div className="pb-3 mb-3 border-b border-slate-200">
+               <label className="text-[10px] font-bold text-slate-700 uppercase block mb-1">Notification Emails (On New Submission)</label>
+               <input type="text" placeholder="e.g. admin@example.com, manager@example.com" value={formConfig.settings?.notificationEmails || ''} onChange={(e) => setFormConfig({...formConfig, settings: { ...formConfig.settings, notificationEmails: e.target.value }})} className="w-full sm:w-3/4 p-2 text-[11px] rounded bg-white border border-slate-300 focus:border-blue-500 outline-none" />
+               <span className="text-[9px] text-slate-400 block mt-1">Sends an email via the server's SMTP configuration on new response. Separate multiple with commas.</span>
+            </div>
+
+            <div className="pt-1">
                <label className="text-xs font-bold text-slate-800 block mb-2">Daily Time Constraints (Local Time)</label>
                <span className="text-[10px] text-slate-500 block mb-3">If configured, the form will only be available during these daily time slots. You can set up to 3 slots.</span>
                
