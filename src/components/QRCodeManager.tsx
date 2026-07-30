@@ -1,0 +1,257 @@
+import React, { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Link2, Image as ImageIcon, Video, Plus, Trash2, Edit, X, Save, Copy, ExternalLink, QrCode } from 'lucide-react';
+
+interface QRCodeData {
+  id: string;
+  title: string;
+  type: 'link' | 'image' | 'video';
+  targetData: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default function QRCodeManager() {
+  const [qrs, setQrs] = useState<QRCodeData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  
+  const [editForm, setEditForm] = useState<Partial<QRCodeData>>({});
+
+  useEffect(() => {
+    fetchQrs();
+  }, []);
+
+  const fetchQrs = () => {
+    setLoading(true);
+    fetch('/api/qrcodes')
+      .then(res => res.json())
+      .then(data => {
+        setQrs(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoading(false);
+      });
+  };
+
+  const safeOrigin = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1') 
+    ? window.location.origin 
+    : window.location.origin.replace(/^http:\/\//i, 'https://');
+
+  const handleCreateNew = () => {
+    setIsCreating(true);
+    setEditForm({ title: '', type: 'link', targetData: '' });
+  };
+
+  const handleSave = () => {
+    if (!editForm.title || !editForm.targetData) {
+      alert("Please provide both a title and target data (URL).");
+      return;
+    }
+    
+    if (!editForm.targetData.startsWith('http://') && !editForm.targetData.startsWith('https://')) {
+      alert("Target data must be a valid URL starting with http:// or https://");
+      return;
+    }
+
+    const url = isCreating ? '/api/qrcodes' : `/api/qrcodes/${isEditing}`;
+    const method = isCreating ? 'POST' : 'PUT';
+
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm)
+    })
+      .then(res => res.json())
+      .then(data => {
+        setIsCreating(false);
+        setIsEditing(null);
+        fetchQrs();
+      })
+      .catch(err => alert("Failed to save QR code"));
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this dynamic QR code? It will stop working immediately.")) {
+      fetch(`/api/qrcodes/${id}`, { method: 'DELETE' })
+        .then(() => fetchQrs())
+        .catch(() => alert("Failed to delete QR code"));
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'link': return <Link2 size={16} />;
+      case 'image': return <ImageIcon size={16} />;
+      case 'video': return <Video size={16} />;
+      default: return <Link2 size={16} />;
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <QrCode className="text-purple-600" /> Dynamic QR Code Manager
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">Generate and manage QR codes that can be updated anytime without changing the QR image.</p>
+        </div>
+        
+        <div className="flex flex-col sm:items-end gap-3">
+          <button 
+            onClick={handleCreateNew} 
+            disabled={isCreating || isEditing !== null}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <Plus size={16} /> Create New QR
+          </button>
+        </div>
+      </div>
+
+      {(isCreating || isEditing) && (
+        <div className="bg-white p-6 rounded-xl border border-purple-200 shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-lg text-slate-800">{isCreating ? 'Create Dynamic QR' : 'Edit Dynamic QR'}</h3>
+            <button onClick={() => { setIsCreating(false); setIsEditing(null); }} className="text-slate-400 hover:text-slate-700">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Title</label>
+              <input 
+                type="text" 
+                value={editForm.title || ''} 
+                onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                placeholder="e.g. My Website, Promo Video..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Type</label>
+              <select 
+                value={editForm.type || 'link'}
+                onChange={e => setEditForm({ ...editForm, type: e.target.value as any })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm bg-white"
+              >
+                <option value="link">Website Link</option>
+                <option value="image">Image (URL)</option>
+                <option value="video">Video (URL)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Target URL</label>
+            <input 
+              type="text" 
+              value={editForm.targetData || ''} 
+              onChange={e => setEditForm({ ...editForm, targetData: e.target.value })}
+              placeholder="https://example.com"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm font-mono"
+            />
+            <p className="text-xs text-slate-500 mt-1">This is the link the QR code will redirect to. You can change this anytime later.</p>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button 
+              onClick={() => { setIsCreating(false); setIsEditing(null); }}
+              className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSave}
+              className="px-4 py-2 bg-purple-600 rounded-lg text-white font-semibold text-sm hover:bg-purple-700 transition-colors flex items-center gap-2"
+            >
+              <Save size={16} /> Save QR
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center p-8 text-slate-500 font-medium animate-pulse">Loading QR codes...</div>
+      ) : qrs.length === 0 && !isCreating ? (
+        <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-12 text-center flex flex-col items-center">
+          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+            <QrCode className="text-slate-400 w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-700">No Dynamic QRs Yet</h3>
+          <p className="text-sm text-slate-500 mt-2 mb-6 max-w-sm">Create dynamic QR codes where you can update the destination link anytime without re-printing.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {qrs.map(qr => {
+            const qrUrl = `${safeOrigin}/qr/${qr.id}`;
+            return (
+              <div key={qr.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-md hover:border-purple-200 transition-all">
+                <div className="p-5 flex gap-4">
+                  <div className="shrink-0 bg-white p-2 rounded-xl border-2 border-slate-100">
+                    <QRCodeSVG value={qrUrl} size={80} />
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <div className="flex items-center gap-1.5 mb-1 text-xs font-bold text-purple-600 uppercase tracking-wider">
+                      {getTypeIcon(qr.type)}
+                      {qr.type}
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-lg truncate mb-1" title={qr.title}>{qr.title}</h3>
+                    <p className="text-xs text-slate-500 truncate font-mono" title={qr.targetData}>{qr.targetData}</p>
+                  </div>
+                </div>
+                
+                <div className="border-t border-slate-100 p-3 bg-slate-50 flex items-center justify-between group-hover:bg-purple-50/30 transition-colors">
+                  <div className="flex items-center gap-2">
+                     <button 
+                       onClick={() => {
+                         navigator.clipboard.writeText(qrUrl);
+                         alert('Short link copied!');
+                       }}
+                       className="text-xs font-bold text-slate-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer bg-white px-2 py-1 rounded shadow-xs border border-slate-200"
+                     >
+                       <Copy size={12} /> Copy Link
+                     </button>
+                     <a 
+                       href={qrUrl} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="text-xs font-bold text-slate-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer bg-white px-2 py-1 rounded shadow-xs border border-slate-200"
+                     >
+                       <ExternalLink size={12} /> Test
+                     </a>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        setIsEditing(qr.id);
+                        setEditForm(qr);
+                        setIsCreating(false);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
+                      title="Edit Target"
+                    >
+                      <Edit size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(qr.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 bg-white rounded shadow-xs hover:shadow-sm transition-colors cursor-pointer"
+                      title="Delete QR"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

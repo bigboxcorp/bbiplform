@@ -11,7 +11,7 @@ interface SavedForm {
   updatedAt: string;
 }
 
-export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: string | null, config: FormConfig, excelConfig: ExcelSaveConfig | null) => void, userEmail?: string | null }) {
+export default function FormsHome({ onEditForm, userEmail, onNavigateToQR }: { onEditForm: (id: string | null, config: FormConfig, excelConfig: ExcelSaveConfig | null) => void, userEmail?: string | null, onNavigateToQR?: () => void }) {
   const [forms, setForms] = useState<SavedForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrModalUrl, setQrModalUrl] = useState<string | null>(null);
@@ -219,6 +219,17 @@ export default function FormsHome({ onEditForm, userEmail }: { onEditForm: (id: 
           </div>
         </div>
       )}
+
+      {/* Dynamic QR Code Manager Link */}
+      <div className="mt-auto pt-8 pb-4 flex justify-end">
+        <button 
+          onClick={onNavigateToQR}
+          className="text-slate-500 hover:text-purple-600 font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer group"
+        >
+          <QrCode size={16} className="group-hover:scale-110 transition-transform" />
+          QR Code Generator
+        </button>
+      </div>
     </div>
   );
 }

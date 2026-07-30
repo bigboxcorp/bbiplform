@@ -64,6 +64,14 @@ db.exec(`
     userEmail TEXT,
     submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS qrcodes (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    type TEXT,
+    targetData TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 const DEFAULT_CLIENT_ID = "c26c42ed-a704-4a2e-8bde-44a6727bb47b";
@@ -1156,6 +1164,73 @@ async function startServer() {
       res
         .status(500)
         .json({ error: `Secure Graph Proxy Error: ${err.message}` });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Dynamic QR Code Routes
+  // -------------------------------------------------------------
+  
+  app.get("/api/qrcodes", (req, res) => {
+    try {
+      const qrs = db.prepare("SELECT * FROM qrcodes ORDER BY createdAt DESC").all();
+      res.json(qrs);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/qrcodes", (req, res) => {
+    try {
+      const { title, type, targetData } = req.body;
+      const id = uuidv4().substring(0, 8); // Short ID for QR
+      db.prepare("INSERT INTO qrcodes (id, title, type, targetData) VALUES (?, ?, ?, ?)").run(id, title, type, targetData);
+      const qr = db.prepare("SELECT * FROM qrcodes WHERE id = ?").get(id);
+      res.json(qr);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/qrcodes/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, type, targetData } = req.body;
+      db.prepare("UPDATE qrcodes SET title = ?, type = ?, targetData = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?").run(title, type, targetData, id);
+      const qr = db.prepare("SELECT * FROM qrcodes WHERE id = ?").get(id);
+      if (!qr) return res.status(404).json({ error: "Not found" });
+      res.json(qr);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/qrcodes/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      db.prepare("DELETE FROM qrcodes WHERE id = ?").run(id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Short link redirection for Dynamic QR
+  app.get("/qr/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const qr = db.prepare("SELECT * FROM qrcodes WHERE id = ?").get(id) as any;
+      if (!qr) {
+        return res.status(404).send("QR code not found or deleted.");
+      }
+      // Redirect directly to the URL (works for links, images, and videos if they are URLs)
+      if (qr.targetData && qr.targetData.startsWith("http")) {
+        return res.redirect(302, qr.targetData);
+      } else {
+        return res.status(400).send("Invalid target data for this QR code.");
+      }
+    } catch (err: any) {
+      res.status(500).send("Server Error");
     }
   });
 

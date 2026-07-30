@@ -7,6 +7,7 @@ import PublicForm from './components/PublicForm';
 import ResponsesViewer from './components/ResponsesViewer';
 import EditLogs from './components/EditLogs';
 import FormsHome from './components/FormsHome';
+import QRCodeManager from './components/QRCodeManager';
 import { 
   FileSpreadsheet, 
   Settings, 
@@ -57,7 +58,7 @@ export default function App() {
   }
 
   // BUILDER APP LOGIC
-  const [activeTab, setActiveTab] = useState<'home' | 'designer' | 'connector' | 'dashboard' | 'logs'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'designer' | 'connector' | 'dashboard' | 'logs' | 'qr-manager'>('home');
   const [activeFormId, setActiveFormId] = useState<string | null>(null);
   const [appUrl, setAppUrl] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
@@ -313,11 +314,16 @@ export default function App() {
      localStorage.removeItem('microsoft_tokens');
   };
 
-  if (activeTab === 'home') {
+  if (activeTab === 'home' || activeTab === 'qr-manager') {
     return (
        <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
           <nav className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 sm:px-8 shadow-sm shrink-0 sticky top-0 z-50">
             <div className="flex items-center gap-3">
+              {activeTab === 'qr-manager' && (
+                <button onClick={() => setActiveTab('home')} className="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-md transition-colors mr-1">
+                  <ChevronLeft size={20} />
+                </button>
+              )}
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm text-[10px]">BBIPL</div>
               <span className="font-semibold text-lg tracking-tight text-slate-800">
                 Forms Dashboard <span className="text-slate-450 font-normal text-sm">v3.0</span>
@@ -341,7 +347,11 @@ export default function App() {
               )}
             </div>
           </nav>
-          <FormsHome onEditForm={handleEditForm} userEmail={userEmail} />
+          {activeTab === 'home' ? (
+            <FormsHome onEditForm={handleEditForm} userEmail={userEmail} onNavigateToQR={() => setActiveTab('qr-manager')} />
+          ) : (
+            <QRCodeManager />
+          )}
        </div>
     );
   }
