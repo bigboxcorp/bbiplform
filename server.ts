@@ -445,10 +445,6 @@ async function startServer() {
       console.log(`[GRAPH HEADERS]`, headers);
       if (fetchOptions.body) {
         const bodyStr = fetchOptions.body.toString();
-        require('fs').appendFileSync('logs.txt', `\n[AUTH GRAPH CALL BODY LENGTH] ${bodyStr.length}\n`);
-        if (bodyStr.length < 2000) {
-            require('fs').appendFileSync('logs.txt', `[AUTH GRAPH CALL BODY] ${bodyStr}\n`);
-        }
       }
 
       const graphRes = await fetch(graphUrl, fetchOptions);
@@ -1130,10 +1126,6 @@ async function startServer() {
 
         if (fetchOptions.body) {
           const bodyStr = fetchOptions.body.toString();
-          require('fs').appendFileSync('logs.txt', `\n[PUBLIC GRAPH CALL BODY LENGTH] ${bodyStr.length}\n`);
-          if (bodyStr.length < 2000) {
-              require('fs').appendFileSync('logs.txt', `[PUBLIC GRAPH CALL BODY] ${bodyStr}\n`);
-          }
         }
 
         console.log(`[PUBLIC GRAPH CALL] ${req.method} ${graphUrl}`);
@@ -1232,7 +1224,7 @@ async function startServer() {
         return res.status(400).json({ error: "Document/PDF size exceeds the 100MB limit." });
       }
       
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      const fileUrl = `/uploads/${req.file.filename}`;
       res.json({ url: fileUrl });
     } catch (err: any) {
       res.status(500).json({ error: err.message });

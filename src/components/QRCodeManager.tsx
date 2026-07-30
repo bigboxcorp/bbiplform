@@ -362,7 +362,7 @@ export default function QRCodeManager() {
                       style={{ width: 80, height: 80 }}
                       fgColor={qr.fgColor || "#000000"} 
                       bgColor={qr.bgColor || "#ffffff"}
-                      imageSettings={qr.logoUrl ? { src: qr.logoUrl, height: 60, width: 60, excavate: true } : undefined}
+                      imageSettings={qr.logoUrl ? { src: qr.logoUrl, height: 60, width: 60, excavate: true, excavateSize: 60, crossOrigin: "anonymous" } : undefined}
                     />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -446,7 +446,7 @@ export default function QRCodeManager() {
                   style={{ width: 240, height: 240 }}
                   fgColor={viewingQr.fgColor || "#000000"} 
                   bgColor={viewingQr.bgColor || "#ffffff"}
-                  imageSettings={viewingQr.logoUrl ? { src: viewingQr.logoUrl, height: 60, width: 60, excavate: true } : undefined}
+                  imageSettings={viewingQr.logoUrl ? { src: viewingQr.logoUrl, height: 60, width: 60, excavate: true, crossOrigin: "anonymous" } : undefined}
                 />
               </div>
               
