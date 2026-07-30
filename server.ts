@@ -1284,7 +1284,7 @@ async function startServer() {
         return res.status(404).send("QR code not found or deleted.");
       }
       
-      if (qr.targetData && qr.targetData.startsWith("http")) {
+      if (qr.targetData && (qr.targetData.startsWith("http") || qr.targetData.startsWith("/uploads/"))) {
         if (qr.type === 'image') {
           return res.send(`
             <!DOCTYPE html>
