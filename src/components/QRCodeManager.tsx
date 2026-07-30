@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Link2, Image as ImageIcon, Video, Plus, Trash2, Edit, X, Save, Copy, ExternalLink, QrCode, Download } from 'lucide-react';
+import { Link2, Image as ImageIcon, Video, Plus, Trash2, Edit, X, Save, Copy, ExternalLink, QrCode, Download, CheckCircle } from 'lucide-react';
 
 interface QRCodeData {
   id: string;
@@ -127,8 +127,8 @@ export default function QRCodeManager() {
       return;
     }
     
-    if (!editForm.targetData.startsWith('http://') && !editForm.targetData.startsWith('https://')) {
-      alert("Target data must be a valid URL starting with http:// or https://");
+    if (!editForm.targetData.startsWith('http://') && !editForm.targetData.startsWith('https://') && !editForm.targetData.startsWith('/uploads/')) {
+      alert("Target data must be a valid URL starting with http:// or https:// or be an uploaded file");
       return;
     }
 
@@ -238,13 +238,20 @@ export default function QRCodeManager() {
           <div className="mb-4">
             <label className="block text-sm font-semibold text-slate-700 mb-1">Target URL or Upload Media</label>
             <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={editForm.targetData || ''} 
-                onChange={e => setEditForm({ ...editForm, targetData: e.target.value })}
-                placeholder={editForm.type === 'link' ? "https://example.com" : "Enter URL or Upload File"}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm font-mono"
-              />
+              {editForm.targetData?.startsWith('/uploads/') ? (
+                <div className="w-full px-3 py-2 border border-green-300 bg-green-50 rounded-lg text-sm text-green-700 flex items-center justify-between">
+                  <span className="truncate font-semibold flex items-center gap-2"><CheckCircle size={16} /> File Uploaded Successfully</span>
+                  <button onClick={() => setEditForm({ ...editForm, targetData: '' })} className="text-green-700 hover:text-green-900 ml-2 font-bold px-2 py-0.5 rounded hover:bg-green-100 transition-colors">✕</button>
+                </div>
+              ) : (
+                <input 
+                  type="text" 
+                  value={editForm.targetData || ''} 
+                  onChange={e => setEditForm({ ...editForm, targetData: e.target.value })}
+                  placeholder={editForm.type === 'link' ? "https://example.com" : "Enter URL or Upload File"}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm font-mono"
+                />
+              )}
               <div className="relative overflow-hidden bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg flex items-center justify-center shrink-0 px-3 cursor-pointer transition-colors">
                 <span className="text-sm font-semibold text-slate-700">{isUploading ? 'Uploading...' : 'Upload File'}</span>
                 <input 
@@ -371,7 +378,7 @@ export default function QRCodeManager() {
                       {qr.type}
                     </div>
                     <h3 className="font-bold text-slate-800 text-lg truncate mb-1" title={qr.title}>{qr.title}</h3>
-                    <p className="text-xs text-slate-500 truncate font-mono" title={qr.targetData}>{qr.targetData}</p>
+                    <p className="text-xs text-slate-500 truncate font-mono" title={qr.targetData}>{qr.targetData?.startsWith('/uploads/') ? 'Uploaded File' : qr.targetData}</p>
                   </div>
                 </div>
                 
@@ -434,7 +441,7 @@ export default function QRCodeManager() {
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-6 text-center flex flex-col items-center">
               <h3 className="text-lg font-bold text-slate-900 mb-2 truncate w-full" title={viewingQr.title}>{viewingQr.title}</h3>
-              <p className="text-xs text-slate-500 mb-4">{viewingQr.targetData}</p>
+              <p className="text-xs text-slate-500 mb-4">{viewingQr.targetData?.startsWith('/uploads/') ? 'Uploaded File' : viewingQr.targetData}</p>
               
               <div className="bg-white p-4 rounded-xl border-2 border-slate-100 inline-block mb-6">
                 <QRCodeCanvas 
