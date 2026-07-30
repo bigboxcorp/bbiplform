@@ -74,6 +74,17 @@ db.exec(`
   );
 `);
 
+// Auto-migrate to add new columns for QR customization if they don't exist
+try {
+  db.prepare("ALTER TABLE qrcodes ADD COLUMN fgColor TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE qrcodes ADD COLUMN bgColor TEXT").run();
+} catch (e) {}
+try {
+  db.prepare("ALTER TABLE qrcodes ADD COLUMN logoUrl TEXT").run();
+} catch (e) {}
+
 const DEFAULT_CLIENT_ID = "c26c42ed-a704-4a2e-8bde-44a6727bb47b";
 
 function getMicrosoftCredentials() {
@@ -1182,9 +1193,9 @@ async function startServer() {
 
   app.post("/api/qrcodes", (req, res) => {
     try {
-      const { title, type, targetData } = req.body;
+      const { title, type, targetData, fgColor, bgColor, logoUrl } = req.body;
       const id = uuidv4().substring(0, 8); // Short ID for QR
-      db.prepare("INSERT INTO qrcodes (id, title, type, targetData) VALUES (?, ?, ?, ?)").run(id, title, type, targetData);
+      db.prepare("INSERT INTO qrcodes (id, title, type, targetData, fgColor, bgColor, logoUrl) VALUES (?, ?, ?, ?, ?, ?, ?)").run(id, title, type, targetData, fgColor || null, bgColor || null, logoUrl || null);
       const qr = db.prepare("SELECT * FROM qrcodes WHERE id = ?").get(id);
       res.json(qr);
     } catch (err: any) {
@@ -1195,8 +1206,8 @@ async function startServer() {
   app.put("/api/qrcodes/:id", (req, res) => {
     try {
       const { id } = req.params;
-      const { title, type, targetData } = req.body;
-      db.prepare("UPDATE qrcodes SET title = ?, type = ?, targetData = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?").run(title, type, targetData, id);
+      const { title, type, targetData, fgColor, bgColor, logoUrl } = req.body;
+      db.prepare("UPDATE qrcodes SET title = ?, type = ?, targetData = ?, fgColor = ?, bgColor = ?, logoUrl = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?").run(title, type, targetData, fgColor || null, bgColor || null, logoUrl || null, id);
       const qr = db.prepare("SELECT * FROM qrcodes WHERE id = ?").get(id);
       if (!qr) return res.status(404).json({ error: "Not found" });
       res.json(qr);
@@ -1223,9 +1234,48 @@ async function startServer() {
       if (!qr) {
         return res.status(404).send("QR code not found or deleted.");
       }
-      // Redirect directly to the URL (works for links, images, and videos if they are URLs)
+      
       if (qr.targetData && qr.targetData.startsWith("http")) {
-        return res.redirect(302, qr.targetData);
+        if (qr.type === 'image') {
+          return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>${qr.title}</title>
+              <style>
+                body { margin: 0; padding: 0; background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; }
+                img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+              </style>
+            </head>
+            <body>
+              <img src="${qr.targetData}" alt="${qr.title}" />
+            </body>
+            </html>
+          `);
+        } else if (qr.type === 'video') {
+           if (qr.targetData.includes('youtube.com') || qr.targetData.includes('youtu.be')) {
+             return res.redirect(302, qr.targetData);
+           }
+           return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <title>${qr.title}</title>
+              <style>
+                body { margin: 0; padding: 0; background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; }
+                video { max-width: 100%; max-height: 100vh; outline: none; }
+              </style>
+            </head>
+            <body>
+              <video controls autoplay playsinline src="${qr.targetData}"></video>
+            </body>
+            </html>
+          `);
+        } else {
+          return res.redirect(302, qr.targetData);
+        }
       } else {
         return res.status(400).send("Invalid target data for this QR code.");
       }

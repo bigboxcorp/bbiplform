@@ -7,6 +7,9 @@ interface QRCodeData {
   title: string;
   type: 'link' | 'image' | 'video';
   targetData: string;
+  fgColor?: string;
+  bgColor?: string;
+  logoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,7 +46,7 @@ export default function QRCodeManager() {
 
   const handleCreateNew = () => {
     setIsCreating(true);
-    setEditForm({ title: '', type: 'link', targetData: '' });
+    setEditForm({ title: '', type: 'link', targetData: '', fgColor: '#000000', bgColor: '#FFFFFF', logoUrl: '' });
   };
 
   const handleSave = () => {
@@ -146,7 +149,7 @@ export default function QRCodeManager() {
             </div>
           </div>
           
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-sm font-semibold text-slate-700 mb-1">Target URL</label>
             <input 
               type="text" 
@@ -156,6 +159,43 @@ export default function QRCodeManager() {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm font-mono"
             />
             <p className="text-xs text-slate-500 mt-1">This is the link the QR code will redirect to. You can change this anytime later.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">QR Color</label>
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="color" 
+                  value={editForm.fgColor || '#000000'} 
+                  onChange={e => setEditForm({ ...editForm, fgColor: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"
+                />
+                <span className="text-xs text-slate-500">{editForm.fgColor || '#000000'}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Background</label>
+              <div className="flex gap-2 items-center">
+                <input 
+                  type="color" 
+                  value={editForm.bgColor || '#ffffff'} 
+                  onChange={e => setEditForm({ ...editForm, bgColor: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent shadow-sm border border-slate-200"
+                />
+                <span className="text-xs text-slate-500">{editForm.bgColor || '#ffffff'}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Logo URL (Optional)</label>
+              <input 
+                type="text" 
+                value={editForm.logoUrl || ''} 
+                onChange={e => setEditForm({ ...editForm, logoUrl: e.target.value })}
+                placeholder="https://.../logo.png"
+                className="w-full px-3 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:border-purple-500 text-sm"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3">
@@ -192,8 +232,14 @@ export default function QRCodeManager() {
             return (
               <div key={qr.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-md hover:border-purple-200 transition-all">
                 <div className="p-5 flex gap-4">
-                  <div className="shrink-0 bg-white p-2 rounded-xl border-2 border-slate-100">
-                    <QRCodeSVG value={qrUrl} size={80} />
+                  <div className="shrink-0 bg-white p-2 rounded-xl border-2 border-slate-100 flex items-center justify-center">
+                    <QRCodeSVG 
+                      value={qrUrl} 
+                      size={80} 
+                      fgColor={qr.fgColor || "#000000"} 
+                      bgColor={qr.bgColor || "#ffffff"}
+                      imageSettings={qr.logoUrl ? { src: qr.logoUrl, height: 20, width: 20, excavate: true } : undefined}
+                    />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <div className="flex items-center gap-1.5 mb-1 text-xs font-bold text-purple-600 uppercase tracking-wider">
