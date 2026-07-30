@@ -221,12 +221,12 @@ export default function FormsHome({ onEditForm, userEmail, onNavigateToQR }: { o
       )}
 
       {/* Dynamic QR Code Manager Link */}
-      <div className="mt-auto pt-8 pb-4 flex justify-end">
+      <div className="mt-auto pt-12 pb-4 flex justify-center border-t border-slate-200 mt-8">
         <button 
           onClick={onNavigateToQR}
-          className="text-slate-500 hover:text-purple-600 font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer group"
+          className="text-slate-400 hover:text-purple-600 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer group"
         >
-          <QrCode size={16} className="group-hover:scale-110 transition-transform" />
+          <QrCode size={14} className="group-hover:scale-110 transition-transform opacity-70" />
           QR Code Generator
         </button>
       </div>

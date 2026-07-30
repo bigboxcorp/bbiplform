@@ -5,9 +5,30 @@ import dotenv from "dotenv";
 import Database from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
+import multer from "multer";
+import fs from "fs";
 
 // Load environment variables from .env file
 dotenv.config();
+
+// Setup Multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_'));
+  }
+});
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 200 * 1024 * 1024 } // 200MB max limit to allow videos
+});
 
 // Setup SMTP Transporter
 const transporter = nodemailer.createTransport({
@@ -1179,9 +1200,22 @@ async function startServer() {
   });
 
   // -------------------------------------------------------------
-  // Dynamic QR Code Routes
+  // Dynamic QR Code Routes & Media Upload
   // -------------------------------------------------------------
   
+  app.post("/api/upload", upload.single("file"), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      res.json({ url: fileUrl });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/qrcodes", (req, res) => {
     try {
       const qrs = db.prepare("SELECT * FROM qrcodes ORDER BY createdAt DESC").all();
@@ -1283,6 +1317,9 @@ async function startServer() {
       res.status(500).send("Server Error");
     }
   });
+
+  // Serve uploads directory
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Serve static UI assets or run dev middleware
   if (process.env.NODE_ENV !== "production") {
