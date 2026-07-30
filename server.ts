@@ -5,9 +5,30 @@ import dotenv from "dotenv";
 import Database from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
+import multer from "multer";
+import fs from "fs";
 
 // Load environment variables from .env file
 dotenv.config();
+
+// Setup Multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadPath = path.join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_'));
+  }
+});
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 200 * 1024 * 1024 } // 200MB max limit to allow videos
+});
 
 // Setup SMTP Transporter
 const transporter = nodemailer.createTransport({
@@ -124,6 +145,7 @@ async function getAppOnlyToken() {
 
 async function startServer() {
   const app = express();
+  app.set('trust proxy', 1);
   const PORT = 3000;
 
   // Middleware to parse JSON bodies
@@ -1179,9 +1201,44 @@ async function startServer() {
   });
 
   // -------------------------------------------------------------
-  // Dynamic QR Code Routes
+  // Dynamic QR Code Routes & Media Upload
   // -------------------------------------------------------------
   
+  app.post("/api/upload", (req, res, next) => {
+    upload.single("file")(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: "File exceeds the maximum allowed size of 200MB." });
+        }
+        return res.status(500).json({ error: err.message });
+      }
+      next();
+    });
+  }, (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      
+      const file = req.file;
+      const mimeType = file.mimetype;
+      const sizeMB = file.size / (1024 * 1024);
+      
+      if (mimeType.startsWith("image/") && sizeMB > 20) {
+        return res.status(400).json({ error: "Image size exceeds the 20MB limit." });
+      } else if (mimeType.startsWith("video/") && sizeMB > 200) {
+        return res.status(400).json({ error: "Video size exceeds the 200MB limit." });
+      } else if (sizeMB > 100 && !mimeType.startsWith("video/")) {
+        return res.status(400).json({ error: "Document/PDF size exceeds the 100MB limit." });
+      }
+      
+      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      res.json({ url: fileUrl });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get("/api/qrcodes", (req, res) => {
     try {
       const qrs = db.prepare("SELECT * FROM qrcodes ORDER BY createdAt DESC").all();
@@ -1283,6 +1340,9 @@ async function startServer() {
       res.status(500).send("Server Error");
     }
   });
+
+  // Serve uploads directory
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Serve static UI assets or run dev middleware
   if (process.env.NODE_ENV !== "production") {
