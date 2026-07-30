@@ -89,7 +89,7 @@ export default function FormsHome({ onEditForm, userEmail, onNavigateToQR }: { o
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="flex flex-col gap-6 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 min-h-[calc(100vh-64px)]">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-6 rounded-xl border border-slate-200 shadow-sm gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -221,12 +221,12 @@ export default function FormsHome({ onEditForm, userEmail, onNavigateToQR }: { o
       )}
 
       {/* Dynamic QR Code Manager Link */}
-      <div className="mt-auto pt-8 pb-4 flex justify-end">
+      <div className="mt-auto pt-8 pb-2 flex justify-center border-t border-slate-200">
         <button 
           onClick={onNavigateToQR}
-          className="text-slate-500 hover:text-purple-600 font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer group"
+          className="text-slate-400 hover:text-purple-600 font-medium text-[10px] flex items-center gap-1 transition-colors cursor-pointer group"
         >
-          <QrCode size={16} className="group-hover:scale-110 transition-transform" />
+          <QrCode size={12} className="group-hover:scale-110 transition-transform opacity-70" />
           QR Code Generator
         </button>
       </div>
