@@ -358,10 +358,11 @@ export default function QRCodeManager() {
                       value={qrUrl} 
                       size={400} 
                       level="H"
+                      includeMargin={true}
                       style={{ width: 80, height: 80 }}
                       fgColor={qr.fgColor || "#000000"} 
                       bgColor={qr.bgColor || "#ffffff"}
-                      imageSettings={qr.logoUrl ? { src: qr.logoUrl, height: 80, width: 80, excavate: true } : undefined}
+                      imageSettings={qr.logoUrl ? { src: qr.logoUrl, height: 60, width: 60, excavate: true } : undefined}
                     />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -439,11 +440,13 @@ export default function QRCodeManager() {
                 <QRCodeCanvas 
                   id={`view-qr-canvas-${viewingQr.id}`}
                   value={`${safeOrigin}/qr/${viewingQr.id}`} 
-                  size={240} 
+                  size={400} 
                   level="H"
+                  includeMargin={true}
+                  style={{ width: 240, height: 240 }}
                   fgColor={viewingQr.fgColor || "#000000"} 
                   bgColor={viewingQr.bgColor || "#ffffff"}
-                  imageSettings={viewingQr.logoUrl ? { src: viewingQr.logoUrl, height: 48, width: 48, excavate: true } : undefined}
+                  imageSettings={viewingQr.logoUrl ? { src: viewingQr.logoUrl, height: 60, width: 60, excavate: true } : undefined}
                 />
               </div>
               

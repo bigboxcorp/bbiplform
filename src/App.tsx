@@ -326,7 +326,9 @@ export default function App() {
               )}
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold text-sm text-[10px]">BBIPL</div>
               <span className="font-semibold text-lg tracking-tight text-slate-800">
-                Forms Dashboard <span className="text-slate-450 font-normal text-sm">v3.0</span>
+                {activeTab === 'qr-manager' ? 'QR Code Manager' : (
+                  <>Forms Dashboard <span className="text-slate-400 font-normal text-sm">v3.0</span></>
+                )}
               </span>
             </div>
             <div className="flex items-center gap-4">
